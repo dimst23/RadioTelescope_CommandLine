@@ -11,7 +11,7 @@ class uInterface(object):
 		print("6. Location settings")
 		print("Enter your menu choice: ")
 		
-		inp = input()
+		choice = input()
 		
 		#Initialy for testing
 		if inp == "6":
@@ -23,6 +23,9 @@ class uInterface(object):
 		print("1. Keep current location")
 		print("2. Set new location")
 		print("3. Return to main menu")
+		print("Enter your menu choice: ")
+		
+		choice = input()
 		#Control to be added
 
 	def TCPMenu(self):
@@ -31,6 +34,9 @@ class uInterface(object):
 		print("2. Chage host")
 		print("3. Test current connection")
 		print("4. Return to main menu")
+		print("Enter your menu choice: ")
+		
+		choice = input()
 		#Control to be added
 
 	def transitMenu(self):
@@ -38,6 +44,10 @@ class uInterface(object):
 		print("1. Provide transit point coordinates (Dec/RA)")
 		print("2. Choose time for the currently chosen object")
 		print("3. Return to main menu")
+		print("Enter your menu choice: ")
+		
+		choice = input()
+		#Control to be added
 	
 	def cls(self):
 		os.system('cls' if os.name == 'nt' else 'clear')
