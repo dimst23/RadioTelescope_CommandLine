@@ -1,7 +1,16 @@
+#Import the required libraries
 import os
 
 class uInterface(object):
+	def intro(self):
+		print("***********************************************")
+		print("**  A.U.Th Radio Telescope Control Software  **")
+		print("**                                           **")
+		print("**  by Dimitrios Stoupis - dstoupis@auth.gr  **")
+		print("***********************************************")
+	
 	def mainMenu(self):
+		self.cls() #Clear the previous menu before showing the new one
 		print("Main Menu:")
 		print("1. Read Position")
 		print("2. Choose object")
@@ -13,9 +22,18 @@ class uInterface(object):
 		
 		choice = input()
 		
-		#Initialy for testing
-		if inp == "6":
-			self.cls()
+		if choice == "2":
+			self.cls() #Clear the previous menu before showing the new one
+			self.objectMenu()
+		elif choice == "3":
+			self.cls() #Clear the previous menu before showing the new one
+			self.transitMenu()
+		elif choice == "5":
+			self.cls() #Clear the previous menu before showing the new one
+			self.TCPMenu()
+		elif choice == "6":
+			self.cls() #Clear the previous menu before showing the new one
+			self.locationMenu()
 
 	def locationMenu(self):
 		#Show current settings on the top. That will be done latter after deciding for the final menu outline
@@ -30,8 +48,8 @@ class uInterface(object):
 
 	def TCPMenu(self):
 		print("TCP settings menu:")
-		print("1. Change address")
-		print("2. Chage host")
+		print("1. Change host")
+		print("2. Chage port")
 		print("3. Test current connection")
 		print("4. Return to main menu")
 		print("Enter your menu choice: ")
@@ -49,8 +67,23 @@ class uInterface(object):
 		choice = input()
 		#Control to be added
 	
+	def objectMenu(self):
+		print("Object choice menu:")
+		print("1. Sun")
+		print("2. Moon")
+		print("3. Jupiter")
+		print("4. Return to main menu")
+		print("Enter your menu choice: ")
+		
+		choice = input()
+		#Control to be added
+	
 	def cls(self):
 		os.system('cls' if os.name == 'nt' else 'clear')
+		self.intro()
 
+
+#Initial test code
+uInterface().cls()
 
 uInterface().mainMenu()
