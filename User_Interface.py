@@ -64,10 +64,9 @@ class uInterface(object):
 			self.cls() #Clear the previous menu before showing the new one
 			#Show current settings for TCP. This will be enabled once the client code and config file code has been written
 			print("TCP settings menu:")
-			print("1. Change host")
-			print("2. Chage port")
-			print("3. Test current connection")
-			print("4. Return to main menu")
+			print("1. Change host and/or port")
+			print("2. Test current connection")
+			print("3. Return to main menu")
 			if wrong_ch:
 				choice = input("Enter a correct number please: ")
 				wrong_ch = False
@@ -96,7 +95,7 @@ class uInterface(object):
 						continue
 				continue #Stay in the TCP menu
 			#Third choice to be added
-			elif choice == "4":
+			elif choice == "3":
 				break
 			else:
 				wrong_ch = True
