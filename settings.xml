@@ -1,0 +1,13 @@
+<?xml version="1.0" ?>
+<settings>
+	<location>
+		<altitude>50</altitude>
+		<latitude>40.37</latitude>
+		<longitude>22.96</longitude>
+	</location>
+	<TCP>
+		<host>127.0.0.1</host>
+		<port>10001</port>
+		<autoconnect>1</autoconnect>
+	</TCP>
+</settings>
