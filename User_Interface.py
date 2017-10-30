@@ -1,24 +1,12 @@
 #Import the required libraries
 import os
+import showMenu as show
 
 class uInterface(object):
-	def intro(self):
-		print("***********************************************")
-		print("**  A.U.Th Radio Telescope Control Software  **")
-		print("**                                           **")
-		print("**  by Dimitrios Stoupis - dstoupis@auth.gr  **")
-		print("***********************************************")
-	
 	def mainMenu(self):
 		while(True):
 			self.cls() #Clear the previous menu before showing the new one
-			print("Main Menu:")
-			print("1. Read Position")
-			print("2. Choose object")
-			print("3. Transit")
-			print("4. Aim and guide")
-			print("5. TCP settings")
-			print("6. Location settings")
+			show.showMenu().main() #Show the main menu items
 			choice = input("Enter your menu choice: ")
 			
 			if choice == "2":
@@ -35,9 +23,7 @@ class uInterface(object):
 		while(True):
 			self.cls() #Clear the previous menu before showing the new one
 			#Show current settings on the top. That will be done latter after deciding for the final menu outline
-			print("Location Menu:")
-			print("1. Set new location")
-			print("2. Return to main menu")
+			show.showMenu().location()
 			if wrong_ch:
 				choice = input("Enter a correct number please: ")
 			else:
@@ -63,10 +49,7 @@ class uInterface(object):
 		while(True):
 			self.cls() #Clear the previous menu before showing the new one
 			#Show current settings for TCP. This will be enabled once the client code and config file code has been written
-			print("TCP settings menu:")
-			print("1. Change host and/or port")
-			print("2. Test current connection")
-			print("3. Return to main menu")
+			show.showMenu().TCP()
 			if wrong_ch:
 				choice = input("Enter a correct number please: ")
 				wrong_ch = False
@@ -102,21 +85,14 @@ class uInterface(object):
 
 	def transitMenu(self):
 		self.cls() #Clear the previous menu before showing the new one
-		print("Transit menu:")
-		print("1. Provide transit point coordinates (Dec/RA)")
-		print("2. Choose time for the currently chosen object")
-		print("3. Return to main menu")
+		show.showMenu().transit()
 		choice = input("Enter your menu choice: ")
 		
 		#Control to be added
 	
 	def objectMenu(self):
 		self.cls() #Clear the previous menu before showing the new one
-		print("Object choice menu:")
-		print("1. Sun")
-		print("2. Moon")
-		print("3. Jupiter")
-		print("4. Return to main menu")
+		show.showMenu().object()
 		choice = input("Enter your menu choice: ")
 		
 		#Control to be added
@@ -128,7 +104,7 @@ class uInterface(object):
 	
 	def cls(self):
 		os.system('cls' if os.name == 'nt' else 'clear')
-		self.intro()
+		show.showMenu().intro()
 
 
 #Initial test code
