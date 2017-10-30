@@ -46,6 +46,8 @@ class uInterface(object):
 
 	def TCPMenu(self):
 		wrong_ch = False
+		serv_change = False
+		#Read TCP settings from the XML configuration file
 		while(True):
 			self.cls() #Clear the previous menu before showing the new one
 			#Show current settings for TCP. This will be enabled once the client code and config file code has been written
@@ -60,22 +62,28 @@ class uInterface(object):
 			if choice == "1":
 				self.cls() #Clear the previous menu before showing the new one
 				print("\nEnter the server host name e.g. \"localhost\" or 127.0.0.1:")
-				host = input() #Get the host name from the user
+				host = input("Host: ") #Get the host name from the user
 				print("The entered host is: " + host)
-				continue #Stay in the TCP menu
-			elif choice == "2":
+				#If statement to check if the entered host is the same as the saved one. If not change serv_change to True
+				
 				while(True):
-					self.cls() #Clear the previous menu before showing the new one
 					if wrong_ch:
 						print("Please give an integer as the server port: ")
+						wrong_ch = False
 					else:
-						print("\nEnter the server port as an integer e.g. 10001: ")
+						print("\nNow enter the server port as an integer e.g. 10001: ")
 					try:
-						port = int(input("Enter port: "), 10)
+						port = int(input("Port: "), 10) #Convert string from input to decimal integer
 						break
 					except:
 						wrong_ch = True
 						continue
+				#If statement to check if the port and the host are the same as the saved ones. If they are not both the same change serv_change to True.
+				#If both are the same, just return to the TCP menu.
+				#First ask the user if the values entered are accepted and then move on.
+				#If there are new values entered, and the user accepts them, inform the user that the current connection, if any, will be aborted,
+				#And the values are going to be chaged.
+				#Also ask the user if he wants a connection to be made with the new values.
 				continue #Stay in the TCP menu
 			#Third choice to be added
 			elif choice == "3":
