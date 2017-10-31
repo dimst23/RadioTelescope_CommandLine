@@ -1,12 +1,12 @@
 #Import the required libraries
 import os
-import showMenu as show
+from showMenu import showMenu
 
 class uInterface(object):
 	def mainMenu(self, cfgData):
 		while(True):
 			self.cls() #Clear the previous menu before showing the new one
-			show.showMenu().main() #Show the main menu items
+			showMenu().main() #Show the main menu items
 			choice = input("Enter your menu choice: ")
 			
 			if choice == "2":
@@ -23,7 +23,7 @@ class uInterface(object):
 		while(True):
 			self.cls() #Clear the previous menu before showing the new one
 			#Show current settings on the top. That will be done latter after deciding for the final menu outline
-			show.showMenu().location()
+			showMenu().location()
 			if wrong_ch:
 				choice = input("Enter a correct number please: ")
 			else:
@@ -45,14 +45,25 @@ class uInterface(object):
 				wrong_ch = True
 
 	def TCPMenu(self, cfgData):
-		wrong_ch = False
-		serv_change = False
+		wrong_ch = False #Wrong choice indicator
+		serv_change = False #Server change indicator
+		
 		#Read TCP settings from the XML configuration file
+		s_host = cfgData.getHost()
+		s_port = int(cfgData.getPort())
+		
 		while(True):
 			self.cls() #Clear the previous menu before showing the new one
-			#Show current settings for TCP. This will be enabled once the client code and config file code has been written
-			print(cfgData.getHost())
-			show.showMenu().TCP()
+			
+			#Show current settings for TCP
+			print("****************************")
+			print("->Current TCP settings:")
+			print("   [*]Host: %s" %s_host)
+			print("   [*]Port: %s" %s_port)
+			print("****************************")
+			#Code to be added about connecton status and autoupdate choice
+			
+			showMenu().TCP() #Show the TCP menu choices
 			if wrong_ch:
 				choice = input("Enter a correct number please: ")
 				wrong_ch = False
@@ -98,14 +109,14 @@ class uInterface(object):
 
 	def transitMenu(self):
 		self.cls() #Clear the previous menu before showing the new one
-		show.showMenu().transit()
+		showMenu().transit()
 		choice = input("Enter your menu choice: ")
 		
 		#Control to be added
 	
 	def objectMenu(self):
 		self.cls() #Clear the previous menu before showing the new one
-		show.showMenu().object()
+		showMenu().object()
 		choice = input("Enter your menu choice: ")
 		
 		#Control to be added
@@ -117,7 +128,7 @@ class uInterface(object):
 	
 	def cls(self):
 		os.system('cls' if os.name == 'nt' else 'clear')
-		show.showMenu().intro()
+		showMenu().intro()
 
 
 #Initial test code
