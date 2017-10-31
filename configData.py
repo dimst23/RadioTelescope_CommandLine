@@ -30,7 +30,7 @@ class confData(object):
 			if item.tag == child:
 				item.text = value
 				elm.set("updated", "yes")
-				self.tree.write("settings.xml")
+				self.tree.write(self.filename)
 				break
 			else:
 				continue
@@ -40,7 +40,7 @@ class confData(object):
 	
 	def setUpdateStatus(self, element, status):
 		self.root.find(element).set("updated", status)
-		self.tree.write("settings.xml")
+		self.tree.write(self.filename)
 	
 	def getLatLon(self):
 		lat = self.getConfig("location", "latitude")
