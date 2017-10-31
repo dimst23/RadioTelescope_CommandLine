@@ -46,15 +46,31 @@ class confData(object):
 		lat = self.getConfig("location", "latitude")
 		lon = self.getConfig("location", "longitude")
 		return [lat, lon]
+		
+	def setLatLon(self, location):
+		self.setConfig("location", "latitude", location[0])
+		self.setConfig("location", "longitude", location[1])
 	
 	def getAltitude(self):
 		return self.getConfig("location", "altitude")
 	
+	def setAltitude(self, altitude):
+		self.setConfig("location", "altitude", altitude)
+	
 	def getHost(self):
 		return self.getConfig("TCP", "host")
+		
+	def setHost(self, host):
+		self.setConfig("TCP", "host", host)
 	
 	def getPort(self):
 		return self.getConfig("TCP", "port")
+		
+	def setPort(self, port):
+		self.setConfig("TCP", "port", port)
 	
 	def getTCPAutoStart(self):
 		return self.getConfig("TCP", "autoconnect")
+		
+	def setTCPAutoStart(self, strt):
+		self.setConfig("TCP", "autoconnect", strt)
