@@ -67,7 +67,7 @@ class confData(object):
 		return self.getConfig("TCP", "port")
 		
 	def setPort(self, port):
-		self.setConfig("TCP", "port", port)
+		self.setConfig("TCP", "port", str(port))
 	
 	def getTCPAutoStart(self):
 		return self.getConfig("TCP", "autoconnect")
