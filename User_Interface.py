@@ -3,7 +3,7 @@ import os
 import showMenu as show
 
 class uInterface(object):
-	def mainMenu(self):
+	def mainMenu(self, cfgData):
 		while(True):
 			self.cls() #Clear the previous menu before showing the new one
 			show.showMenu().main() #Show the main menu items
@@ -14,7 +14,7 @@ class uInterface(object):
 			elif choice == "3":
 				self.transitMenu()
 			elif choice == "5":
-				self.TCPMenu()
+				self.TCPMenu(cfgData)
 			elif choice == "6":
 				self.locationMenu()
 
@@ -44,13 +44,14 @@ class uInterface(object):
 			else:
 				wrong_ch = True
 
-	def TCPMenu(self):
+	def TCPMenu(self, cfgData):
 		wrong_ch = False
 		serv_change = False
 		#Read TCP settings from the XML configuration file
 		while(True):
 			self.cls() #Clear the previous menu before showing the new one
 			#Show current settings for TCP. This will be enabled once the client code and config file code has been written
+			print(cfgData.getHost())
 			show.showMenu().TCP()
 			if wrong_ch:
 				choice = input("Enter a correct number please: ")
@@ -85,6 +86,10 @@ class uInterface(object):
 				#And the values are going to be chaged.
 				#Also ask the user if he wants a connection to be made with the new values.
 				continue #Stay in the TCP menu
+				
+				#Add a ckeck first to see if the entered values are the same as the existing ones
+				cfgData.setHost(host) #Save the host in the settings file
+				cfgData.setPort(port) #Save the port in the settings file
 			#Third choice to be added
 			elif choice == "3":
 				break
@@ -117,4 +122,4 @@ class uInterface(object):
 
 #Initial test code
 
-uInterface().mainMenu()
+#uInterface().mainMenu()
