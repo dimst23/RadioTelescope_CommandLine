@@ -4,7 +4,7 @@ from xml.etree.ElementTree import Element
 import os
 
 class confData(object):
-	#Class construcor
+	#Class constructor
 	def __init__(self, filename):
 		self.filename = filename #Create a variable with the given filename
 		self.parse() #Parse the XML file
@@ -74,3 +74,13 @@ class confData(object):
 		
 	def setTCPAutoStart(self, strt):
 		self.setConfig("TCP", "autoconnect", strt)
+		
+	def getAllConfiguration(self):
+		loc = list(self.root.find("location"))
+		tcp = list(self.root.find("TCP"))
+		data = []
+		for loc_item in loc:
+			data.append(loc_item.text)
+		for tcp_item in tcp:
+			data.append(tcp_item.text)
+		return data
