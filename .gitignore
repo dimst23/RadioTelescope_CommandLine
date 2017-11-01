@@ -212,4 +212,7 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+# XML settings files
+*.xml
+
 # End of https://www.gitignore.io/api/c,c++,linux,python,windows
