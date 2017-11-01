@@ -1,9 +1,8 @@
-<?xml version="1.0" ?>
 <settings>
-	<location>
+	<location updated="no">
 		<altitude>50</altitude>
-		<latitude>40.37</latitude>
-		<longitude>22.96</longitude>
+		<latitude>40.6436100</latitude>
+		<longitude>22.9308600</longitude>
 	</location>
 	<TCP>
 		<host>127.0.0.1</host>
