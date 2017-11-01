@@ -70,13 +70,13 @@ class confData(object):
 		self.setConfig("TCP", "port", str(port))
 	
 	def getTCPAutoConnStatus(self):
-		return self.getConfig("TCP", "autoconnect")
+		return self.root.find("TCP").get("autoconnect")
 		
 	def TCPAutoConnEnable(self):
-		self.setConfig("TCP", "autoconnect", "yes")
+		self.root.find("TCP").set("autoconnect", "yes")
 		
 	def TCPAutoConnDisable(self):
-		self.setConfig("TCP", "autoconnect", "no")
+		self.root.find("TCP").set("autoconnect", "no")
 		
 	def getAllConfiguration(self):
 		loc = list(self.root.find("location"))
