@@ -46,22 +46,34 @@ class uInterface(object):
 			else:
 				choice = input("Enter your menu choice: ")
 			
-			#Control to be added
 			if choice == "1":
 				self.cls() #Clear the screen for the new menu
-				lat = self.setAngle("Latitude")
-				print("Latitude is set to: " + lat)
-				lon = self.setAngle("Longitude")
-				print("Longitude is set to: " + lon)
+				lat = self.getAngle("Latitude") #Get the latitude from the user
+				lon = self.getAngle("Longitude") #Get the longitude from the user
+				
+				#Get the location's altitude
+				print("\nEnter the location's altitude in meters.")
+				alt = input("Altitude: ")
+				
+				#Print the values so the user sees a summary of what he entered
+				print("\nThe values entered are:")
+				print(" ->Latitude:  %s" %lat + u"\u00b0")
+				print(" ->Longitude: %s" %lon + u"\u00b0")
+				print(" ->Altitude:  %sm" %alt)
+				
+				#Ask if the values are accepted by the user
 				acc = input("Do you accept the values? If yes type 'y', otherwise type anything: ")
+				
 				if acc == "y":
-					if (s_latlon[0] == lat) and (s_latlon[1] == lon):
+					#If the values entered are all the same with the already saved ones, do not update anything
+					if (s_latlon[0] == lat) and (s_latlon[1] == lon) and (s_alt == alt):
 						cfgData.setUpdateStatus("location", "no")
 					else:
-						#Also add code for the altitude
 						s_latlon = [lat, lon]
+						s_alt = alt
 						cfgData.setLatLon(s_latlon)
-						continue
+						cfgData.setAltitude(s_alt)
+					continue
 			elif choice == "2":
 				break
 			else:
@@ -144,7 +156,7 @@ class uInterface(object):
 		
 		#Control to be added
 	
-	def setAngle(self, angName):
+	def getAngle(self, angName):
 		print("\nEnter the " + angName + " in decimal degrees.")
 		print("For a south Latitude or a weste Longitude, enter a minus sign in the decimal value.")
 		return input(angName + ": ") #Return the angle entered by the user
