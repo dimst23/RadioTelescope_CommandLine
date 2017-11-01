@@ -74,9 +74,11 @@ class confData(object):
 		
 	def TCPAutoConnEnable(self):
 		self.root.find("TCP").set("autoconnect", "yes")
+		self.tree.write(self.filename)
 		
 	def TCPAutoConnDisable(self):
 		self.root.find("TCP").set("autoconnect", "no")
+		self.tree.write(self.filename)
 		
 	def getAllConfiguration(self):
 		loc = list(self.root.find("location"))
