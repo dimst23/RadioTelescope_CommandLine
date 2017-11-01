@@ -16,13 +16,30 @@ class uInterface(object):
 			elif choice == "5":
 				self.TCPMenu(cfgData)
 			elif choice == "6":
-				self.locationMenu()
+				self.locationMenu(cfgData)
 
-	def locationMenu(self):
+	def locationMenu(self, cfgData):
 		wrong_ch = False
+		
+		s_latlon = cfgData.getLatLon() #First element is latitude and second element is logitude
+		s_alt = cfgData.getAltitude()
+		
 		while(True):
+			loc_updt = cfgData.getUpdateStatus("location") #See if the location has been updated
 			self.cls() #Clear the previous menu before showing the new one
-			#Show current settings on the top. That will be done latter after deciding for the final menu outline
+			
+			#Show current settings for the location
+			print("****************************")
+			if loc_updt == "yes":
+				print("->Currently set location (updated):")
+				cfgData.setUpdateStatus("location", "no")
+			else:
+				print("->Currently set location:")
+			print("   [*]Latitude:  %s" %s_latlon[0] + u"\u00b0")
+			print("   [*]Longitude: %s" %s_latlon[1] + u"\u00b0")
+			print("   [*]Altitude:  %s" %s_alt + "m")
+			print("****************************")
+			
 			showMenu().location()
 			if wrong_ch:
 				choice = input("Enter a correct number please: ")
@@ -38,7 +55,13 @@ class uInterface(object):
 				print("Longitude is set to: " + lon)
 				acc = input("Do you accept the values? If yes type 'y', otherwise type anything: ")
 				if acc == "y":
-					break
+					if (s_latlon[0] == lat) and (s_latlon[1] == lon):
+						cfgData.setUpdateStatus("location", "no")
+					else:
+						#Also add code for the altitude
+						s_latlon = [lat, lon]
+						cfgData.setLatLon(s_latlon)
+						continue
 			elif choice == "2":
 				break
 			else:
