@@ -6,7 +6,24 @@ from time import sleep
 class uInterface(object):
 	def mainMenu(self, cfgData, clientSocket):
 		while(True):
+			print("Getting TCP connection status...")
+			sleep(1) #Use that in order for the user to be able and see the message
+			conStatus = clientSocket.sendRequest("Test") #Get the connection status
+			
 			self.cls() #Clear the previous menu before showing the new one
+			
+			print("***********************************************")
+			print("-->Current status:")
+			print("   [*]Latitude:   %s" %cfgData.getLatLon()[0] + u"\u00b0")
+			print("   [*]Longitude:  %s" %cfgData.getLatLon()[1] + u"\u00b0")
+			print("   [*]Altitude:   %s" %cfgData.getAltitude() + "m")
+			if conStatus == "OK":
+				print("   [*]TCP status: Connected")
+				print("         >Server: %s:%s" %(cfgData.getHost(), cfgData.getPort()))
+			else:
+				print("   [*]TCP status: Disconnected")
+			print("***********************************************")
+			
 			showMenu().main() #Show the main menu items
 			choice = input("Enter your menu choice: ")
 			
@@ -123,10 +140,10 @@ class uInterface(object):
 			
 			#Show additional menu options, depending on the connection status
 			if con_status != "OK":
-				print("4. Connect to server")
-				print("5. Return to main menu")
+				print("   4. Connect to server")
+				print("   5. Return to main menu")
 			else:
-				print("4. Return to main menu")
+				print("   4. Return to main menu")
 			
 			#Wrong choice input handling
 			if wrong_ch:
@@ -179,18 +196,19 @@ class uInterface(object):
 				sleep(2) #Keep the message for two seconds
 			elif choice == "3":
 				if s_autocon == "yes":
-					cfgData.TCPAutoConnDisable()
+					cfgData.TCPAutoConnDisable() #Disable the autoconnection and save the setting
 					s_autocon = cfgData.getTCPAutoConnStatus()
 				else:
-					cfgData.TCPAutoConnEnable()
+					cfgData.TCPAutoConnEnable() #Enable the autoconnection and save the setting
 					s_autocon = cfgData.getTCPAutoConnStatus()
 			elif choice == "4":
-				if con_status == "OK":
+				if con_status == "OK": #If the program is already connected to a server, there nothing to do here
 					break
-				else:
+				else: #If the program is not connected to a server, do the following
 					print("\nConnecting to server %s:%s\n" %(s_host, s_port))
 					if clientSocket.connect(s_host, s_port):
-						if clientSocket.sendRequest("Test") == "OK":
+						contct = clientSocket.sendRequest("Test") #Try to make a contact with the server
+						if contct == "OK": #If contact was made, print the following
 							print("Successfully connected to the server %s:%s" %(s_host, s_port))
 							print("And also made contact with the server.")
 							sleep(2)
