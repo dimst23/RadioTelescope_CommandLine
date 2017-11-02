@@ -1,6 +1,7 @@
 #Import the required libraries
 import os
 from showMenu import showMenu
+from time import sleep
 
 class uInterface(object):
 	def mainMenu(self, cfgData, clientSocket):
@@ -19,10 +20,10 @@ class uInterface(object):
 				self.locationMenu(cfgData)
 
 	def locationMenu(self, cfgData):
-		wrong_ch = False
+		wrong_ch = False #Indicate if there is a wrong choice input from the user
 		
 		s_latlon = cfgData.getLatLon() #First element is latitude and second element is logitude
-		s_alt = cfgData.getAltitude()
+		s_alt = cfgData.getAltitude() #Get the altitude from the settings file
 		
 		while(True):
 			loc_updt = cfgData.getUpdateStatus("location") #See if the location has been updated
@@ -40,7 +41,9 @@ class uInterface(object):
 			print("   [*]Altitude:  %s" %s_alt + "m")
 			print("****************************")
 			
-			showMenu().location()
+			showMenu().location() #Show the menu items for the location
+			
+			#Handle what happens with a wrong input
 			if wrong_ch:
 				choice = input("Enter a correct number please: ")
 			else:
@@ -69,13 +72,14 @@ class uInterface(object):
 					if (s_latlon[0] == lat) and (s_latlon[1] == lon) and (s_alt == alt):
 						cfgData.setUpdateStatus("location", "no")
 					else:
-						s_latlon = [lat, lon]
-						s_alt = alt
+						#Set the latitude, longitude and altitude in the settings file
 						cfgData.setLatLon(s_latlon)
 						cfgData.setAltitude(s_alt)
+						s_latlon = [lat, lon]
+						s_alt = alt
 					continue
 			elif choice == "2":
-				break
+				break #Get out from the loop and return to main menu
 			else:
 				wrong_ch = True
 
@@ -88,13 +92,17 @@ class uInterface(object):
 		s_port = int(cfgData.getPort())
 		s_autocon = cfgData.getTCPAutoConnStatus()
 		
+		con_status = "No" #Create a variable about current connectino status
+		
 		while(True):
-			print("Getting TCP connection status.")
-			con_status = clientSocket.sendRequest("Test")
+			#Get the client's connection status with the server
+			if con_status != "OK":
+				print("Getting TCP connection status...")
+				con_status = clientSocket.sendRequest("Test")
 			self.cls() #Clear the previous menu before showing the new one
 			
 			#Show current settings for TCP
-			print("****************************")
+			print("*****************************")
 			print("->Current TCP settings:")
 			print("   [*]Host: %s" %s_host)
 			print("   [*]Port: %s" %s_port)
@@ -102,23 +110,34 @@ class uInterface(object):
 				print("   [*]Autoconnect: Enabled")
 			else:
 				print("   [*]Autoconnect: Disabled")
-			print("****************************")
+			
+			#Also show the client's connection status to the server
+			print("*****************************")
 			if con_status == "OK":
-				print("->Connection status: Connected")
+				print("->Client Status: Connected")
 			else:
-				print("->Connection status: Disconnected")
-			print("****************************")
+				print("->Client Status: Disconnected")
+			print("*****************************")
 			
 			showMenu().TCP() #Show the TCP menu choices
+			
+			#Show additional menu options, depending on the connection status
+			if con_status != "OK":
+				print("4. Connect to server")
+				print("5. Return to main menu")
+			else:
+				print("4. Return to main menu")
+			
+			#Wrong choice input handling
 			if wrong_ch:
 				choice = input("Enter a correct number please: ")
 				wrong_ch = False
 			else:
 				choice = input("Enter your menu choice: ")
 			
-			#Control to be added
 			if choice == "1":
 				self.cls() #Clear the previous menu before showing the new one
+				
 				print("\nEnter the server host name e.g. \"localhost\" or 127.0.0.1:")
 				host = input("Host: ") #Get the host name from the user
 				print("The entered host is: " + host)
@@ -147,10 +166,38 @@ class uInterface(object):
 				#Add a ckeck first to see if the entered values are the same as the existing ones
 				cfgData.setHost(host) #Save the host in the settings file
 				cfgData.setPort(port) #Save the port in the settings file
-			#Third choice to be added
+			elif choice == "2":
+				print("\nTrying to connect to the server.")
+				print("The details of the server are %s:%s" %(s_host, s_port))
+				con_status = clientSocket.sendRequest("Test")
+				
+				#Output messages according to the prevoius result of connection status
+				if con_status == "OK":
+					print("\nSuccesfully contacted the server.")
+				else:
+					print("\nUnfortunately, communication with the server was imposible.")
+				sleep(2) #Keep the message for two seconds
 			elif choice == "3":
-				break
+				if s_autocon == "yes":
+					cfgData.TCPAutoConnDisable()
+					s_autocon = cfgData.getTCPAutoConnStatus()
+				else:
+					cfgData.TCPAutoConnEnable()
+					s_autocon = cfgData.getTCPAutoConnStatus()
 			elif choice == "4":
+				if con_status == "OK":
+					break
+				else:
+					print("\nConnecting to server %s:%s\n" %(s_host, s_port))
+					if clientSocket.connect(s_host, s_port):
+						if clientSocket.sendRequest("Test") == "OK":
+							print("Successfully connected to the server %s:%s" %(s_host, s_port))
+							print("And also made contact with the server.")
+							sleep(2)
+					else:
+						print("Failed to connect to the server %s:%s" %(s_host, s_port))
+						sleep(2)
+			elif (choice == "5") and (con_status != "OK"):
 				break
 			else:
 				wrong_ch = True
