@@ -14,6 +14,7 @@ class showMenu(object):
 		print("   4. Aim and guide")
 		print("   5. TCP settings")
 		print("   6. Location settings")
+		print("   7. Exit program")
 	
 	def location(self):
 		print("Location Menu:")

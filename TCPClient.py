@@ -6,6 +6,7 @@ class TCPClient(object):
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #Create a socket object
 		self.sock.settimeout(20) #Set the timeout to 20 seconds
 		self.sock_exst = True #Indicate that a socket object exists
+		self.sock_connected = False
 		autocon = cfgData.getTCPAutoConnStatus() #See if autoconnection at startup is enabled
 		if autocon == "yes":
 			host = cfgData.getHost()
@@ -30,6 +31,7 @@ class TCPClient(object):
 			self.sock_connected = False
 		else:
 			self.sock_connected = False
+		return self.sock_connected
 	
 	def sendRequest(self, request):
 		if self.sock_connected:
