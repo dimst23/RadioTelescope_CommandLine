@@ -3,7 +3,7 @@ import os
 from showMenu import showMenu
 
 class uInterface(object):
-	def mainMenu(self, cfgData):
+	def mainMenu(self, cfgData, clientSocket):
 		while(True):
 			self.cls() #Clear the previous menu before showing the new one
 			showMenu().main() #Show the main menu items
@@ -14,7 +14,7 @@ class uInterface(object):
 			elif choice == "3":
 				self.transitMenu()
 			elif choice == "5":
-				self.TCPMenu(cfgData)
+				self.TCPMenu(cfgData, clientSocket)
 			elif choice == "6":
 				self.locationMenu(cfgData)
 
@@ -79,15 +79,18 @@ class uInterface(object):
 			else:
 				wrong_ch = True
 
-	def TCPMenu(self, cfgData):
+	def TCPMenu(self, cfgData, clientSocket):
 		wrong_ch = False #Wrong choice indicator
 		serv_change = False #Server change indicator
 		
 		#Read TCP settings from the XML configuration file
 		s_host = cfgData.getHost()
 		s_port = int(cfgData.getPort())
+		s_autocon = cfgData.getTCPAutoConnStatus()
 		
 		while(True):
+			print("Getting TCP connection status.")
+			con_status = clientSocket.sendRequest("Test")
 			self.cls() #Clear the previous menu before showing the new one
 			
 			#Show current settings for TCP
@@ -95,8 +98,16 @@ class uInterface(object):
 			print("->Current TCP settings:")
 			print("   [*]Host: %s" %s_host)
 			print("   [*]Port: %s" %s_port)
+			if s_autocon == "yes":
+				print("   [*]Autoconnect: Enabled")
+			else:
+				print("   [*]Autoconnect: Disabled")
 			print("****************************")
-			#Code to be added about connecton status and autoupdate choice
+			if con_status == "OK":
+				print("->Connection status: Connected")
+			else:
+				print("->Connection status: Disconnected")
+			print("****************************")
 			
 			showMenu().TCP() #Show the TCP menu choices
 			if wrong_ch:
@@ -138,6 +149,8 @@ class uInterface(object):
 				cfgData.setPort(port) #Save the port in the settings file
 			#Third choice to be added
 			elif choice == "3":
+				break
+			elif choice == "4":
 				break
 			else:
 				wrong_ch = True
