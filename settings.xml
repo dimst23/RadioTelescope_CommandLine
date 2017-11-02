@@ -4,9 +4,8 @@
 		<latitude>40.6436100</latitude>
 		<longitude>22.9308600</longitude>
 	</location>
-	<TCP>
+	<TCP autoconnect="yes" updated="no">
 		<host>127.0.0.1</host>
 		<port>10001</port>
-		<autoconnect>1</autoconnect>
 	</TCP>
 </settings>
