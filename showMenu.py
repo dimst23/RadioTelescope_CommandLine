@@ -24,7 +24,7 @@ class showMenu(object):
 		print("TCP settings menu:")
 		print("1. Change host and/or port")
 		print("2. Test current connection")
-		print("3. Return to main menu")
+		print("3. Enable/Disable startup autoconnect")
 	
 	def transit(self):
 		print("Transit menu:")
