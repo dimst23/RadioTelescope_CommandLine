@@ -13,10 +13,9 @@ class uInterface(object):
 	
 	def mainMenu(self):
 		while(True):
-			if self.conStatus != "OK":
-				print("Getting TCP connection status...")
-				sleep(1) #Use that in order for the user to be able and see the message
-				conStatus = self.clientSocket.sendRequest("Test") #Get the connection status
+			print("Getting TCP connection status...")
+			self.conStatus = self.clientSocket.sendRequest("Test") #Get the connection status
+			sleep(1) #Use that in order for the user to be able and see the message
 			self.cls() #Clear the previous menu before showing the new one
 			
 			print("***********************************************")
@@ -126,14 +125,18 @@ class uInterface(object):
 		
 		while(True):
 			#Get the client's connection status with the server
-			if self.conStatus != "OK":
-				print("Getting TCP connection status...")
-				self.conStatus = self.clientSocket.sendRequest("Test")
+			print("Getting TCP connection status...")
+			self.conStatus = self.clientSocket.sendRequest("Test") #Get the connection status
+			tcp_updt = self.cfgData.getUpdateStatus("TCP") #See if the TCP has been updated
 			self.cls() #Clear the previous menu before showing the new one
 			
 			#Show current settings for TCP
-			print("*****************************")
-			print("->Current TCP settings:")
+			print("**********************************")
+			if tcp_updt == "yes":
+				print("->Current TCP settings (updated):")
+				self.cfgData.setUpdateStatus("TCP", "no")
+			else:
+				print("->Current TCP settings:")
 			print("   [*]Host: %s" %s_host)
 			print("   [*]Port: %s" %s_port)
 			if s_autocon == "yes":
@@ -142,12 +145,12 @@ class uInterface(object):
 				print("   [*]Autoconnect: Disabled")
 			
 			#Also show the client's connection status to the server
-			print("*****************************")
+			print("**********************************")
 			if self.conStatus == "OK":
 				print("->Client Status: Connected")
 			else:
 				print("->Client Status: Disconnected")
-			print("*****************************")
+			print("**********************************")
 			
 			showMenu().TCP() #Show the TCP menu choices
 			
@@ -168,34 +171,73 @@ class uInterface(object):
 			if choice == "1":
 				self.cls() #Clear the previous menu before showing the new one
 				
-				print("\nEnter the server host name e.g. \"localhost\" or 127.0.0.1:")
+				#Host input section
+				print("\nEnter the server host name e.g. \"localhost\" or 127.0.0.1.\nThe current host is \'%s\'" %s_host)
 				host = input("Host: ") #Get the host name from the user
 				print("The entered host is: " + host)
-				#If statement to check if the entered host is the same as the saved one. If not change serv_change to True
 				
+				#Port input section
 				while(True):
 					if wrong_ch:
 						print("Please give an integer as the server port: ")
 						wrong_ch = False
 					else:
-						print("\nNow enter the server port as an integer e.g. 10001: ")
+						print("\nNow enter the server port as an integer e.g. 10001.\nThe current port is %s" %s_port)
 					try:
 						port = int(input("Port: "), 10) #Convert string from input to decimal integer
 						break
 					except:
 						wrong_ch = True
 						continue
-				#If statement to check if the port and the host are the same as the saved ones. If they are not both the same change serv_change to True.
-				#If both are the same, just return to the TCP menu.
-				#First ask the user if the values entered are accepted and then move on.
-				#If there are new values entered, and the user accepts them, inform the user that the current connection, if any, will be aborted,
-				#And the values are going to be chaged.
-				#Also ask the user if he wants a connection to be made with the new values.
+				
+				#Provide the user with a summary of what was entered
+				print("\nThe entered parameters for the server are:")
+				print("Host: %s\nPort: %s\n" %(host, port))
+				
+				#Ask if the parameters are accepted by the user
+				print("Do you accept the parameters? If yes, the current connection, if any, will be aborted.")
+				print("If the parameters entered are the same as the current ones, no connection will be aborted.")
+				acc = input("Do you agree with the above? If yes type 'y', otherwise type anything: ")
+				
+				'''
+					If statement to check if the port and the host are the same as the saved ones. If they are not both the same change serv_change to True.
+					If both are the same, just return to the TCP menu.
+					First ask the user if the values entered are accepted and then move on.
+					If there are new values entered, and the user accepts them, inform the user that the current connection, if any, will be aborted,
+					And the values are going to be chaged.
+					Also ask the user if he wants a connection to be made with the new values.
+				'''
+				if acc == "y":
+					if (s_host == host) and (s_port == port):
+						self.cfgData.setUpdateStatus("TCP", "no")
+						serv_change = False
+					else:
+						print("\nDisconnecting from server...")
+						if self.clientSocket.sendRequest("Terminate") == "Bye":
+							self.clientSocket.disconnect() #Disconnect from the current connection
+							print("Disconnected from server.")
+							serv_change = True
+						else:
+							print("Couldn\'t terminate properly, but the new settings will be saved.")
+						self.cfgData.setHost(host) #Save the host in the settings file
+						self.cfgData.setPort(port) #Save the port in the settings file
+						s_host = host #Update the saved host
+						s_port = port #Update the saved port
+					sleep(1) #Pause for one second so the message is visible
+				
+				#If there was success in disconnecting after setting update, do the following
+				if serv_change:
+					print("\nDo you want to establish a connection with the new server?")
+					acc = input("If yes type 'y', otherwise type anything: ")
+					if acc == "y":
+						self.clientSocket.connect(s_host, s_port) #Connect to the new server
+						if self.clientSocket.sendRequest("Test") == "OK":
+							print("Succesfully connected with the server.")
+						else:
+							print("There was a communication problem with the server.")
+					sleep(1) #Pause for one second so the message is visible
 				continue #Stay in the TCP menu
 				
-				#Add a ckeck first to see if the entered values are the same as the existing ones
-				self.cfgData.setHost(host) #Save the host in the settings file
-				self.cfgData.setPort(port) #Save the port in the settings file
 			elif choice == "2":
 				print("\nTrying to connect to the server.")
 				print("The details of the server are %s:%s" %(s_host, s_port))

@@ -16,6 +16,7 @@ class TCPClient(object):
 	def connect(self, host, port):
 		if self.sock_exst == False:
 			self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			self.sock.settimeout(20) #Set the timeout to 20 seconds
 			self.sock_exst = True
 		try:
 			self.sock.connect((host, int(port)))
