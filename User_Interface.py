@@ -4,22 +4,29 @@ from showMenu import showMenu
 from time import sleep
 
 class uInterface(object):
-	def mainMenu(self, cfgData, clientSocket):
+	def __init__(self, cfgData, clientSocket):
+		print("Getting TCP connection status...")
+		self.clientSocket = clientSocket
+		self.cfgData = cfgData
+		self.conStatus = self.clientSocket.sendRequest("Test")
+		self.mainMenu()
+	
+	def mainMenu(self):
 		while(True):
-			print("Getting TCP connection status...")
-			sleep(1) #Use that in order for the user to be able and see the message
-			conStatus = clientSocket.sendRequest("Test") #Get the connection status
-			
+			if self.conStatus != "OK":
+				print("Getting TCP connection status...")
+				sleep(1) #Use that in order for the user to be able and see the message
+				conStatus = self.clientSocket.sendRequest("Test") #Get the connection status
 			self.cls() #Clear the previous menu before showing the new one
 			
 			print("***********************************************")
 			print("-->Current status:")
-			print("   [*]Latitude:   %s" %cfgData.getLatLon()[0] + u"\u00b0")
-			print("   [*]Longitude:  %s" %cfgData.getLatLon()[1] + u"\u00b0")
-			print("   [*]Altitude:   %s" %cfgData.getAltitude() + "m")
-			if conStatus == "OK":
+			print("   [*]Latitude:   %s" %self.cfgData.getLatLon()[0] + u"\u00b0")
+			print("   [*]Longitude:  %s" %self.cfgData.getLatLon()[1] + u"\u00b0")
+			print("   [*]Altitude:   %s" %self.cfgData.getAltitude() + "m")
+			if self.conStatus == "OK":
 				print("   [*]TCP status: Connected")
-				print("         >Server: %s:%s" %(cfgData.getHost(), cfgData.getPort()))
+				print("         >Server: %s:%s" %(self.cfgData.getHost(), self.cfgData.getPort()))
 			else:
 				print("   [*]TCP status: Disconnected")
 			print("***********************************************")
@@ -32,25 +39,33 @@ class uInterface(object):
 			elif choice == "3":
 				self.transitMenu()
 			elif choice == "5":
-				self.TCPMenu(cfgData, clientSocket)
+				self.TCPMenu()
 			elif choice == "6":
-				self.locationMenu(cfgData)
+				self.locationMenu()
+			elif choice == "7":
+				#Some additional code needed in order to inform the RPi for the disconnection
+				print("\nDisconnecting from server...")
+				self.clientSocket.disconnect()
+				print("\nDisconnected from server.")
+				print("Goodbye!")
+				sleep(2)
+				break #Terminate the program
 
-	def locationMenu(self, cfgData):
+	def locationMenu(self):
 		wrong_ch = False #Indicate if there is a wrong choice input from the user
 		
-		s_latlon = cfgData.getLatLon() #First element is latitude and second element is logitude
-		s_alt = cfgData.getAltitude() #Get the altitude from the settings file
+		s_latlon = self.cfgData.getLatLon() #First element is latitude and second element is logitude
+		s_alt = self.cfgData.getAltitude() #Get the altitude from the settings file
 		
 		while(True):
-			loc_updt = cfgData.getUpdateStatus("location") #See if the location has been updated
+			loc_updt = self.cfgData.getUpdateStatus("location") #See if the location has been updated
 			self.cls() #Clear the previous menu before showing the new one
 			
 			#Show current settings for the location
 			print("****************************")
 			if loc_updt == "yes":
 				print("->Currently set location (updated):")
-				cfgData.setUpdateStatus("location", "no")
+				self.cfgData.setUpdateStatus("location", "no")
 			else:
 				print("->Currently set location:")
 			print("   [*]Latitude:  %s" %s_latlon[0] + u"\u00b0")
@@ -87,11 +102,11 @@ class uInterface(object):
 				if acc == "y":
 					#If the values entered are all the same with the already saved ones, do not update anything
 					if (s_latlon[0] == lat) and (s_latlon[1] == lon) and (s_alt == alt):
-						cfgData.setUpdateStatus("location", "no")
+						self.cfgData.setUpdateStatus("location", "no")
 					else:
 						#Set the latitude, longitude and altitude in the settings file
-						cfgData.setLatLon(s_latlon)
-						cfgData.setAltitude(s_alt)
+						self.cfgData.setLatLon(s_latlon)
+						self.cfgData.setAltitude(s_alt)
 						s_latlon = [lat, lon]
 						s_alt = alt
 					continue
@@ -100,22 +115,20 @@ class uInterface(object):
 			else:
 				wrong_ch = True
 
-	def TCPMenu(self, cfgData, clientSocket):
+	def TCPMenu(self):
 		wrong_ch = False #Wrong choice indicator
 		serv_change = False #Server change indicator
 		
 		#Read TCP settings from the XML configuration file
-		s_host = cfgData.getHost()
-		s_port = int(cfgData.getPort())
-		s_autocon = cfgData.getTCPAutoConnStatus()
-		
-		con_status = "No" #Create a variable about current connectino status
+		s_host = self.cfgData.getHost()
+		s_port = int(self.cfgData.getPort())
+		s_autocon = self.cfgData.getTCPAutoConnStatus()
 		
 		while(True):
 			#Get the client's connection status with the server
-			if con_status != "OK":
+			if self.conStatus != "OK":
 				print("Getting TCP connection status...")
-				con_status = clientSocket.sendRequest("Test")
+				self.conStatus = self.clientSocket.sendRequest("Test")
 			self.cls() #Clear the previous menu before showing the new one
 			
 			#Show current settings for TCP
@@ -130,7 +143,7 @@ class uInterface(object):
 			
 			#Also show the client's connection status to the server
 			print("*****************************")
-			if con_status == "OK":
+			if self.conStatus == "OK":
 				print("->Client Status: Connected")
 			else:
 				print("->Client Status: Disconnected")
@@ -139,7 +152,7 @@ class uInterface(object):
 			showMenu().TCP() #Show the TCP menu choices
 			
 			#Show additional menu options, depending on the connection status
-			if con_status != "OK":
+			if self.conStatus != "OK":
 				print("   4. Connect to server")
 				print("   5. Return to main menu")
 			else:
@@ -181,33 +194,33 @@ class uInterface(object):
 				continue #Stay in the TCP menu
 				
 				#Add a ckeck first to see if the entered values are the same as the existing ones
-				cfgData.setHost(host) #Save the host in the settings file
-				cfgData.setPort(port) #Save the port in the settings file
+				self.cfgData.setHost(host) #Save the host in the settings file
+				self.cfgData.setPort(port) #Save the port in the settings file
 			elif choice == "2":
 				print("\nTrying to connect to the server.")
 				print("The details of the server are %s:%s" %(s_host, s_port))
-				con_status = clientSocket.sendRequest("Test")
+				self.conStatus = self.clientSocket.sendRequest("Test")
 				
 				#Output messages according to the prevoius result of connection status
-				if con_status == "OK":
+				if self.conStatus == "OK":
 					print("\nSuccesfully contacted the server.")
 				else:
 					print("\nUnfortunately, communication with the server was imposible.")
 				sleep(2) #Keep the message for two seconds
 			elif choice == "3":
 				if s_autocon == "yes":
-					cfgData.TCPAutoConnDisable() #Disable the autoconnection and save the setting
-					s_autocon = cfgData.getTCPAutoConnStatus()
+					self.cfgData.TCPAutoConnDisable() #Disable the autoconnection and save the setting
+					s_autocon = self.cfgData.getTCPAutoConnStatus()
 				else:
-					cfgData.TCPAutoConnEnable() #Enable the autoconnection and save the setting
-					s_autocon = cfgData.getTCPAutoConnStatus()
+					self.cfgData.TCPAutoConnEnable() #Enable the autoconnection and save the setting
+					s_autocon = self.cfgData.getTCPAutoConnStatus()
 			elif choice == "4":
-				if con_status == "OK": #If the program is already connected to a server, there nothing to do here
+				if self.conStatus == "OK": #If the program is already connected to a server, there nothing to do here
 					break
 				else: #If the program is not connected to a server, do the following
 					print("\nConnecting to server %s:%s\n" %(s_host, s_port))
-					if clientSocket.connect(s_host, s_port):
-						contct = clientSocket.sendRequest("Test") #Try to make a contact with the server
+					if self.clientSocket.connect(s_host, s_port):
+						contct = self.clientSocket.sendRequest("Test") #Try to make a contact with the server
 						if contct == "OK": #If contact was made, print the following
 							print("Successfully connected to the server %s:%s" %(s_host, s_port))
 							print("And also made contact with the server.")
@@ -215,7 +228,7 @@ class uInterface(object):
 					else:
 						print("Failed to connect to the server %s:%s" %(s_host, s_port))
 						sleep(2)
-			elif (choice == "5") and (con_status != "OK"):
+			elif (choice == "5") and (self.conStatus != "OK"):
 				break
 			else:
 				wrong_ch = True
