@@ -15,19 +15,29 @@ class uInterface(object):
 		while(True):
 			print("Getting TCP connection status...")
 			self.conStatus = self.clientSocket.sendRequest("Test") #Get the connection status
-			sleep(1) #Use that in order for the user to be able and see the message
+			#sleep(1) #Use that in order for the user to be able and see the message
 			self.cls() #Clear the previous menu before showing the new one
 			
+			#Create the necessary string according to the autoconnection setting
+			if self.cfgData.getTCPAutoConnStatus() == "yes":
+				autoCon_st = "Enabled"
+			else:
+				autoCon_st = "Disabled"
+			
+			#Show the current configuration and status in the main menu
 			print("***********************************************")
 			print("-->Current status:")
-			print("   [*]Latitude:   %s" %self.cfgData.getLatLon()[0] + u"\u00b0")
-			print("   [*]Longitude:  %s" %self.cfgData.getLatLon()[1] + u"\u00b0")
-			print("   [*]Altitude:   %s" %self.cfgData.getAltitude() + "m")
+			print("   [*]Location:")
+			print("         >Latitude:    %s" %self.cfgData.getLatLon()[0] + u"\u00b0")
+			print("         >Longitude:   %s" %self.cfgData.getLatLon()[1] + u"\u00b0")
+			print("         >Altitude:    %s" %self.cfgData.getAltitude() + "m")
+			print("   [*]TCP status:")
 			if self.conStatus == "OK":
-				print("   [*]TCP status: Connected")
-				print("         >Server: %s:%s" %(self.cfgData.getHost(), self.cfgData.getPort()))
+				print("         >Connected to %s:%s" %(self.cfgData.getHost(), self.cfgData.getPort()))
+				print("         >Autoconnect: %s" %autoCon_st)
 			else:
-				print("   [*]TCP status: Disconnected")
+				print("         >Disconnected")
+				print("         >Autoconnect: %s" %autoCon_st)
 			print("***********************************************")
 			
 			showMenu().main() #Show the main menu items
@@ -42,11 +52,15 @@ class uInterface(object):
 			elif choice == "6":
 				self.locationMenu()
 			elif choice == "7":
-				#Some additional code needed in order to inform the RPi for the disconnection
+				#Additional code may be added if some other processes are active, to terminate them
 				print("\nDisconnecting from server...")
+				if self.clientSocket.sendRequest("Terminate") == "Bye":
+					
+					print("Successfully disconnected from server.")
+				else:
+					print("There was a problem contacting the server, although the connection was closed.")
 				self.clientSocket.disconnect()
-				print("\nDisconnected from server.")
-				print("Goodbye!")
+				print("\nGoodbye! See you again later!")
 				sleep(2)
 				break #Terminate the program
 
@@ -249,6 +263,7 @@ class uInterface(object):
 				else:
 					print("\nUnfortunately, communication with the server was imposible.")
 				sleep(2) #Keep the message for two seconds
+				
 			elif choice == "3":
 				if s_autocon == "yes":
 					self.cfgData.TCPAutoConnDisable() #Disable the autoconnection and save the setting
@@ -256,6 +271,7 @@ class uInterface(object):
 				else:
 					self.cfgData.TCPAutoConnEnable() #Enable the autoconnection and save the setting
 					s_autocon = self.cfgData.getTCPAutoConnStatus()
+					
 			elif choice == "4":
 				if self.conStatus == "OK": #If the program is already connected to a server, there nothing to do here
 					break
@@ -270,10 +286,12 @@ class uInterface(object):
 					else:
 						print("Failed to connect to the server %s:%s" %(s_host, s_port))
 						sleep(2)
+			
+			#Choice No.5 will be available if an only if the client is not connected to the server
 			elif (choice == "5") and (self.conStatus != "OK"):
-				break
+				break #Return to main menu
 			else:
-				wrong_ch = True
+				wrong_ch = True #Reiterrate. Show the appropriate message to the user
 
 	def transitMenu(self):
 		self.cls() #Clear the previous menu before showing the new one
