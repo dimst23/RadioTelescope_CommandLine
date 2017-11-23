@@ -29,7 +29,8 @@ class confData(object):
         for item in children:
             if item.tag == child:
                 item.text = value
-                elm.set("updated", "yes")
+                if (element == "TCP") or (element == "location"):
+                    elm.set("updated", "yes")
                 self.tree.write(self.filename)
                 break
             else:
@@ -79,7 +80,29 @@ class confData(object):
     def TCPAutoConnDisable(self):
         self.root.find("TCP").set("autoconnect", "no")
         self.tree.write(self.filename)
-        
+    
+    def getObject(self):
+        stat_obj = self.root.find("object").get("stationary")
+        if stat_obj == "no":
+            return [self.getConfig("object", "name"), -1]
+        else:
+            name = self.getConfig("object", "name")
+            ra = self.getConfig("object", "RA")
+            dec = self.getConfig("object", "DEC")
+            return [name, ra, dec]
+    
+    def setObject(self, name, ra = -1, dec = -1):
+        if (ra == -1) or (dec == -1):
+            self.root.find("object").set("stationary", "no")
+            self.setConfig("object", "name", name)
+            self.setConfig("object", "RA", str(-1))
+            self.setConfig("object", "DEC", str(-1))
+        else:
+            self.root.find("object").set("stationary", "yes")
+            self.setConfig("object", "name", name)
+            self.setConfig("object", "RA", str(ra))
+            self.setConfig("object", "DEC", str(dec))
+    
     def getAllConfiguration(self):
         loc = list(self.root.find("location"))
         tcp = list(self.root.find("TCP"))
