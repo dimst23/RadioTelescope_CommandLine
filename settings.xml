@@ -5,7 +5,12 @@
         <longitude>22.9308600</longitude>
     </location>
     <TCP autoconnect="yes" updated="no">
-        <host>127.0.0.1</host>
+        <host>192.168.2.110</host>
         <port>10001</port>
     </TCP>
+    <object stationary="yes">
+        <name>Crab Nebula</name>
+        <RA>05h34m31.94s</RA>
+        <DEC>22o00'52.2"</DEC>
+    </object>
 </settings>
