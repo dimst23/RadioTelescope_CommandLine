@@ -5,18 +5,19 @@ from time import sleep
 
 class uInterface(object):
     def __init__(self, cfgData, clientSocket):
-        print("Getting TCP connection status...")
         self.clientSocket = clientSocket
         self.cfgData = cfgData
-        self.conStatus = self.clientSocket.sendRequest("Test")
         self.mainMenu()
     
     def mainMenu(self):
         while(True):
             print("Getting TCP connection status...")
-            self.conStatus = self.clientSocket.sendRequest("Test") #Get the connection status
+            conStatus = self.clientSocket.sendRequest("Test") #Get the connection status
             #sleep(1) #Use that in order for the user to be able and see the message
             self.cls() #Clear the previous menu before showing the new one
+            
+            #Get the currently saved object
+            cur_obj = self.cfgData.getObject()
             
             #Create the necessary string according to the autoconnection setting
             if self.cfgData.getTCPAutoConnStatus() == "yes":
@@ -32,26 +33,36 @@ class uInterface(object):
             print("         >Longitude:   %s" %self.cfgData.getLatLon()[1] + u"\u00b0")
             print("         >Altitude:    %s" %self.cfgData.getAltitude() + "m")
             print("   [*]TCP status:")
-            if self.conStatus == "OK":
+            if conStatus == "OK":
                 print("         >Connected to %s:%s" %(self.cfgData.getHost(), self.cfgData.getPort()))
                 print("         >Autoconnect: %s" %autoCon_st)
             else:
                 print("         >Disconnected")
                 print("         >Autoconnect: %s" %autoCon_st)
+            print("   [*]Selected object:")
+            if cur_obj[1] == -1:
+                print("         >Name: %s" %cur_obj[0])
+            else:
+                print("         >Name: %s" %cur_obj[0])
+                print("         >RA:   %s" %cur_obj[1])
+                print("         >DEC:  %s" %cur_obj[2])
             print("***********************************************")
             
             showMenu().main() #Show the main menu items
             choice = input("Enter your menu choice: ")
             
-            if choice == "2":
+            if choice == "1":
+                self.positionMenu()
+            elif choice == "2":
                 self.objectMenu()
-            elif choice == "3":
-                self.transitMenu()
-            elif choice == "5":
+            #elif choice == "3":
+            #    self.controlMenu()
+            #elif choice == "4":
+            elif choice == "4":
                 self.TCPMenu()
-            elif choice == "6":
+            elif choice == "5":
                 self.locationMenu()
-            elif choice == "7":
+            elif choice == "6":
                 #Additional code may be added if some other processes are active, to terminate them
                 print("\nDisconnecting from server...")
                 if self.clientSocket.sendRequest("Terminate") == "Bye":
@@ -140,7 +151,7 @@ class uInterface(object):
         while(True):
             #Get the client's connection status with the server
             print("Getting TCP connection status...")
-            self.conStatus = self.clientSocket.sendRequest("Test") #Get the connection status
+            conStatus = self.clientSocket.sendRequest("Test") #Get the connection status
             tcp_updt = self.cfgData.getUpdateStatus("TCP") #See if the TCP has been updated
             self.cls() #Clear the previous menu before showing the new one
             
@@ -160,7 +171,7 @@ class uInterface(object):
             
             #Also show the client's connection status to the server
             print("**********************************")
-            if self.conStatus == "OK":
+            if conStatus == "OK":
                 print("->Client Status: Connected")
             else:
                 print("->Client Status: Disconnected")
@@ -169,7 +180,7 @@ class uInterface(object):
             showMenu().TCP() #Show the TCP menu choices
             
             #Show additional menu options, depending on the connection status
-            if self.conStatus != "OK":
+            if conStatus != "OK":
                 print("   4. Connect to server")
                 print("   5. Return to main menu")
             else:
@@ -255,10 +266,10 @@ class uInterface(object):
             elif choice == "2":
                 print("\nTrying to connect to the server.")
                 print("The details of the server are %s:%s" %(s_host, s_port))
-                self.conStatus = self.clientSocket.sendRequest("Test")
+                conStatus = self.clientSocket.sendRequest("Test")
                 
                 #Output messages according to the prevoius result of connection status
-                if self.conStatus == "OK":
+                if conStatus == "OK":
                     print("\nSuccesfully contacted the server.")
                 else:
                     print("\nUnfortunately, communication with the server was imposible.")
@@ -273,7 +284,7 @@ class uInterface(object):
                     s_autocon = self.cfgData.getTCPAutoConnStatus()
                     
             elif choice == "4":
-                if self.conStatus == "OK": #If the program is already connected to a server, there nothing to do here
+                if conStatus == "OK": #If the program is already connected to a server, there nothing to do here
                     break
                 else: #If the program is not connected to a server, do the following
                     print("\nConnecting to server %s:%s\n" %(s_host, s_port))
@@ -282,13 +293,12 @@ class uInterface(object):
                         if contct == "OK": #If contact was made, print the following
                             print("Successfully connected to the server %s:%s" %(s_host, s_port))
                             print("And also made contact with the server.")
-                            sleep(2)
                     else:
                         print("Failed to connect to the server %s:%s" %(s_host, s_port))
-                        sleep(2)
+                    sleep(2)
             
             #Choice No.5 will be available if an only if the client is not connected to the server
-            elif (choice == "5") and (self.conStatus != "OK"):
+            elif (choice == "5") and (conStatus != "OK"):
                 break #Return to main menu
             else:
                 wrong_ch = True #Reiterrate. Show the appropriate message to the user
@@ -301,11 +311,49 @@ class uInterface(object):
         #Control to be added
     
     def objectMenu(self):
-        self.cls() #Clear the previous menu before showing the new one
-        showMenu().object()
-        choice = input("Enter your menu choice: ")
+        #Add functionallity to choose objects from a catalogue
+        while(True):
+            self.cls() #Clear the previous menu before showing the new one
+            showMenu().object()
+            choice = input("Enter your menu choice: ")
+            
+            if choice == "1":
+                self.cfgData.setObject("Sun")
+            elif choice == "2":
+                self.cfgData.setObject("Moon")
+            elif choice == "3":
+                self.cfgData.setObject("Jupiter")
+            elif choice == "4":
+                self.cls()
+                print("Enter the object details below.")
+                name_in = input("Object's name: ")
+                ra_in = input("Right Ascension: ")
+                dec_in = input("Declination: ")
+                #Type conversion is needed for the coordinates before saving
+                self.cfgData.setObject(name_in, ra_in, dec_in)
+            elif choice == "5":
+                break
+    
+    #def controlMenu(self):
         
-        #Control to be added
+    
+    def positionMenu(self):
+        while(True):
+            self.cls() #Clear the previous menu items
+            cur_pos = self.clientSocket.sendRequest("Report Position") #Take the position of the radio telescope
+            if (cur_pos == "No answer") or (cur_pos == None):
+                print("Can not get the current position of the system.")
+            else:
+                cur_pos = cur_pos.split("_")
+                print("The current position of the radio telescope is:")
+                if cur_pos[0] == "POS":
+                    #Make the formatting according to the data sent from the radio telescope pi
+                    print("  >RA : %s" %cur_pos[1])
+                    print("  >DEC: %s\n" %cur_pos[2])
+            user_inp = input("Type 1 to return to main menu: ") #Prompt the user to return to main menu
+            while(user_inp != "1"):
+                user_inp = input("Please enter 1 if you want to return to main menu: ")
+            break #Return to main menu after a successful run
     
     def getAngle(self, angName):
         print("\nEnter the " + angName + " in decimal degrees.")
@@ -315,8 +363,3 @@ class uInterface(object):
     def cls(self):
         os.system('cls' if os.name == 'nt' else 'clear')
         showMenu().intro()
-
-
-#Initial test code
-
-#uInterface().mainMenu()
