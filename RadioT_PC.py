@@ -3,6 +3,7 @@
 from User_Interface import uInterface
 from configData import confData
 from TCPClient import TCPClient
+#from logData import logData
 import sys
 
 if __name__ == '__main__':
