@@ -10,7 +10,7 @@
     </TCP>
     <object stationary="yes">
         <name>Crab Nebula</name>
-        <RA>05h34m31.94s</RA>
-        <DEC>22o00'52.2"</DEC>
+        <RA>83.63308333</RA>
+        <DEC>22.0145</DEC>
     </object>
 </settings>

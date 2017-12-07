@@ -45,5 +45,3 @@ class TCPClient(object):
                 return response
             except:
                 return "No answer"
-    
-    
