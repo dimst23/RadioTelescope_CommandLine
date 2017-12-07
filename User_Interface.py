@@ -1,16 +1,23 @@
 #Import the required libraries
 import os
+import ephem
+import time
 from showMenu import showMenu
 from time import sleep
+
+_rad_to_deg = 57.2957795131
 
 class uInterface(object):
     def __init__(self, cfgData, clientSocket):
         self.clientSocket = clientSocket
         self.cfgData = cfgData
+        self.observer = ephem.Observer()
         self.mainMenu()
     
     def mainMenu(self):
         while(True):
+            lalon = self.cfgData.getLatLon()
+            self.observer.lon, self.observer.lat = lalon[1], lalon[0]
             print("Getting TCP connection status...")
             conStatus = self.clientSocket.sendRequest("Test") #Get the connection status
             #sleep(1) #Use that in order for the user to be able and see the message
@@ -55,9 +62,9 @@ class uInterface(object):
                 self.positionMenu()
             elif choice == "2":
                 self.objectMenu()
-            #elif choice == "3":
-            #    self.controlMenu()
-            #elif choice == "4":
+            elif choice == "3":
+                #self.controlMenu()
+                self.transitMenu()
             elif choice == "4":
                 self.TCPMenu()
             elif choice == "5":
@@ -133,6 +140,7 @@ class uInterface(object):
                         self.cfgData.setAltitude(s_alt)
                         s_latlon = [lat, lon]
                         s_alt = alt
+                        self.observer.lat, self.observer.lon = s_latlon[0], s_latlon[1]
                     continue
             elif choice == "2":
                 break #Get out from the loop and return to main menu
@@ -304,11 +312,150 @@ class uInterface(object):
                 wrong_ch = True #Reiterrate. Show the appropriate message to the user
 
     def transitMenu(self):
-        self.cls() #Clear the previous menu before showing the new one
-        showMenu().transit()
-        choice = input("Enter your menu choice: ")
+        mancoord = False
+        obj_ra = "-1"
+        obj_dec = "-1"
+        man_ra = "-1"
+        man_dec = "-1"
         
-        #Control to be added
+        while(True):
+            chosen_body = self.cfgData.getObject() #Get the currently chosen object
+            self.cls() #Clear the previous menu before showing the new one
+            print("***********************************************")
+            
+            if mancoord:
+                print("   [*]Manual coordinates:")
+                print("         >RA:   %s" %man_ra)
+                print("         >DEC:  %s" %man_dec)
+            else:
+                print("   [*]Selected object:")
+                if chosen_body[1] == -1:
+                    print("         >Name: %s" %chosen_body[0])
+                else:
+                    print("         >Name: %s" %chosen_body[0])
+                    print("         >RA:   %s" %chosen_body[1])
+                    print("         >DEC:  %s" %chosen_body[2])
+            print("***********************************************")
+            showMenu().transit()
+            choice = input("Enter your menu choice: ")
+            
+            #Add control for manual coordinate entrance
+            #If new coordinates entered then set the mancoord variable
+            
+            if choice == "1":
+                self.cls()
+                print("Manual coordinate menu.")
+                man_ra = input("Please enter the desired RA of the object: ")
+                man_dec = input("Please enter the desired DEC of the object: ")
+                mancoord = True
+            elif choice == "2":
+                self.cls()
+                print("Give a transit time which is after the time that enter will be pressed.")
+                print("For better results, provide a time at least 10 minutes from the current time.")
+                tim = input("Give the transit time in UTC by seperating hours, minutes, seconds with ':' (e.g. '20:12:34'): ")
+                
+                '''
+                    Get the time from the user and then check if it is the same as the current time.
+                    If it is then inform the user and ask for another entry.
+                    If the time is good, then procced by taking the current date and combining it with the given time in a string.
+                    The above string will be used as an input to calculate the ephimeris data of the non stationary bodies.
+                    time.gmtime(), tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec
+                '''
+                while(True):
+                    temp = tim.split(":")
+                    if int(temp[0]) < 24 or int(temp[1]) <= 59 or int(temp[2]) <= 59:
+                        break
+                    else:
+                        tim = input("Please enter a correct time: ")
+                
+                #If everything succeds from the control, then move on with the following
+                t_obj = time.gmtime() #Get the return from the gmtime function to use it in the date creation
+                date = "%s/%s/%s" %(t_obj.tm_year, t_obj.tm_mon, t_obj.tm_mday) #Save the date in a string in the appropriate format
+                eph_t_date = "%s %s" %(date, tim) #Make the correct date time string to be used to calculated ephimeris
+                
+                if not mancoord:
+                    if chosen_body[0] == "Sun":
+                        sun = ephem.Sun()
+                        sun.compute(eph_t_date, epoch=date) #Calculate ephimeris at the current date
+                        obj_ra = float(sun.a_ra)*_rad_to_deg
+                        obj_dec = float(sun.a_dec)*_rad_to_deg
+                    elif chosen_body[0] == "Moon":
+                        moon = ephem.Moon()
+                        moon.compute(eph_t_date, epoch=date) #Calculate ephimeris at the current date
+                        obj_ra = float(moon.a_ra)*_rad_to_deg
+                        obj_dec = float(moon.a_dec)*_rad_to_deg
+                    elif chosen_body[0] == "Jupiter":
+                        jup = ephem.Jupiter()
+                        jup.compute(eph_t_date, epoch=date) #Calculate ephimeris at the current date
+                        obj_ra = float(jup.a_ra)*_rad_to_deg
+                        obj_dec = float(jup.a_dec)*_rad_to_deg
+                    else:
+                    #Add control to what to do with stationary bodies
+                        obj_ra = float(chosen_body[1])
+                        obj_dec = float(chosen_body[2])
+                #The hour angle of the object is LST (Local Sidereal Time) - a (Right Ascension)
+                self.observer.date = eph_t_date
+                print("Sidereal Time is: %s" %float(self.observer.sidereal_time())*_rad_to_deg)
+                print("RA is: %s" %obj_ra)
+                hour_ang = float(self.observer.sidereal_time())*_rad_to_deg - obj_ra #ephem sidereal returns in rad
+                #Add control for the negative value of the hour angle
+                print("The hour angle is: %s" %hour_ang)
+                sleep(5)
+                
+                #Send the request for the transit along with the required information to the Raspberry Pi
+                #rsp = self.cfgData.sendRequest("TRNST_RA_%s_DEC_%s" %(hour_ang, obj_dec)) #Send the transit request and get the response
+                
+                #Add control
+            elif choice == "3":
+                break
+
+    #def controlMenu(self):
+        
+    
+    def trackingMenu(self):
+        chosen_body = self.cfgData.getObject() #Get the currently chosen object
+        self.cls()
+        print("***********************************************")
+        print("   [*]Selected object:")
+        if chosen_body[1] == -1:
+            print("         >Name: %s" %chosen_body[0])
+        else:
+            print("         >Name: %s" %chosen_body[0])
+            print("         >RA:   %s" %chosen_body[1])
+            print("         >DEC:  %s" %chosen_body[2])
+        print("***********************************************")
+        
+        track_time = input("Enter for how long you want the object to be tracked in seconds: ")
+        
+        t_obj = time.gmtime() #Get the return from the gmtime function to use it in the date creation
+        date = "%s/%s/" %(t_obj.tm_year, t_obj.tm_mon) #Save the date in a string in the appropriate format
+        cur_time_d = float(t_obj.tm_mday) + float(t_obj.tm_hour)/24.0 + float(t_obj.tm_min/60.0) + float(t_obj.tm_sec/3600.0)
+        tm_date = "%s%s" %(date, cur_time_d) #Creata time and date string
+        
+        if chosen_body[0] == "Sun":
+            body = ephem.Sun()
+            sun.compute(tm_date, epoch=date) #Calculate ephimeris at the current date
+            obj_ra = float(sun.a_ra)*_rad_to_deg
+            obj_dec = float(sun.a_dec)*_rad_to_deg
+        elif chosen_body[0] == "Moon":
+            body = ephem.Moon()
+        elif chosen_body[0] == "Jupiter":
+            body = ephem.Jupiter()
+        else:
+            
+        ra_val = []
+        dec_val = []
+        for i in range(0, 40):
+            cur_time_d += 1.1574074074074073e-05
+            tm_date = "%s%s" %(date, cur_time_d)
+            body.compute(tm_date, epoch=date)
+            ra_val.append(float(body.a_ra))
+            dec_val.append(float(body.a_dec))
+    #def scanningMenu(self):
+        
+    
+    #def skyscanMenu(self):
+        
     
     def objectMenu(self):
         #Add functionallity to choose objects from a catalogue
@@ -333,9 +480,6 @@ class uInterface(object):
                 self.cfgData.setObject(name_in, ra_in, dec_in)
             elif choice == "5":
                 break
-    
-    #def controlMenu(self):
-        
     
     def positionMenu(self):
         while(True):
