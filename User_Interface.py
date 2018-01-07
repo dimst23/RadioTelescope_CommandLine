@@ -64,7 +64,8 @@ class uInterface(object):
                 self.objectMenu()
             elif choice == "3":
                 #self.controlMenu()
-                self.transitMenu()
+                #self.transitMenu()
+                self.trackingMenu()
             elif choice == "4":
                 self.TCPMenu()
             elif choice == "5":
@@ -425,32 +426,62 @@ class uInterface(object):
             print("         >DEC:  %s" %chosen_body[2])
         print("***********************************************")
         
+        print("Tracking Menu")
         track_time = input("Enter for how long you want the object to be tracked in seconds: ")
         
         t_obj = time.gmtime() #Get the return from the gmtime function to use it in the date creation
         date = "%s/%s/" %(t_obj.tm_year, t_obj.tm_mon) #Save the date in a string in the appropriate format
         cur_time_d = float(t_obj.tm_mday) + float(t_obj.tm_hour)/24.0 + float(t_obj.tm_min/60.0) + float(t_obj.tm_sec/3600.0)
-        tm_date = "%s%s" %(date, cur_time_d) #Creata time and date string
+        tm_date = "%s%s" %(date, cur_time_d) #Create time and date string
         
         if chosen_body[0] == "Sun":
             body = ephem.Sun()
-            sun.compute(tm_date, epoch=date) #Calculate ephimeris at the current date
-            obj_ra = float(sun.a_ra)*_rad_to_deg
-            obj_dec = float(sun.a_dec)*_rad_to_deg
+            body.compute(tm_date, epoch=date)
+            obj_ra = float(body.a_ra)*_rad_to_deg
+            obj_dec = float(body.a_dec)*_rad_to_deg
         elif chosen_body[0] == "Moon":
             body = ephem.Moon()
+            body.compute(tm_date, epoch=date)
+            obj_ra = float(body.a_ra)*_rad_to_deg
+            obj_dec = float(body.a_dec)*_rad_to_deg
         elif chosen_body[0] == "Jupiter":
             body = ephem.Jupiter()
-        else:
-            
-        ra_val = []
-        dec_val = []
-        for i in range(0, 40):
-            cur_time_d += 1.1574074074074073e-05
-            tm_date = "%s%s" %(date, cur_time_d)
             body.compute(tm_date, epoch=date)
-            ra_val.append(float(body.a_ra))
-            dec_val.append(float(body.a_dec))
+            obj_ra = float(body.a_ra)*_rad_to_deg
+            obj_dec = float(body.a_dec)*_rad_to_deg
+        else:
+            obj_ra = float(chosen_body[1])
+            obj_dec = float(chosen_body[2])
+
+        if chosen_body[1] == -1: #When the object is not stationary, execute the following
+            sum_ra = sum_dec = 0 #Initialize the sum holding variables
+            for i in range(0, 60):
+                #cur_time_d += 6.9444444444444445e-04 #Add a minute each time, because a change in seconds is too small
+                cur_time_d += 0.0416666666666667 #Add an hour in each iteration, because the change in time for RA/DEC is small
+                tm_date = "%s%s" %(date, cur_time_d)
+                body.compute(tm_date, epoch=date)
+                cur_ra = float(body.a_ra)
+                cur_dec = float(body.a_dec)
+                if i > 0:
+                    sum_ra += (cur_ra - prev_ra)
+                    sum_dec += (cur_dec - prev_dec)
+                prev_ra = cur_ra #Set the previous value to the current one before reiterating
+                prev_dec = cur_dec #Set the previous value to the current one before reiterating
+            roc_ra = ((sum_ra/59)*_rad_to_deg)*3600 #Mean rate of change for the RA in arcsec/hour
+            roc_dec = ((sum_dec/59)*_rad_to_deg)*3600 #Mean rate of change for the DEC in arcsec/hour
+        else:
+            roc_ra = roc_dec = 0 #If the body is stationary (RA/DEC does not change with time), then set the rate of change to zero
+        
+        ans = input("\nDo you want to start tracking? Enter 'y' for yes or anything to quit tracking: ")
+        if ans == "y":
+            #Send the command and get the response
+            #response = self.clientSocket.sendRequest("AAF_RA_%f_ROC_%f_DEC_%f_ROC_%f_TIM_%f" %(obj_ra, roc_ra, obj_dec, roc_dec, float(track_time)))
+            print("AAF_RA_%f_ROC_%f_DEC_%f_ROC_%f_TIM_%f" %(obj_ra, roc_ra, obj_dec, roc_dec, float(track_time)))
+            sleep(3)
+        else:
+            return 1
+        #Add more control
+        
     #def scanningMenu(self):
         
     
@@ -458,7 +489,7 @@ class uInterface(object):
         
     
     def objectMenu(self):
-        #Add functionallity to choose objects from a catalogue
+        #Add functionality to choose objects from a catalog
         while(True):
             self.cls() #Clear the previous menu before showing the new one
             showMenu().object()
