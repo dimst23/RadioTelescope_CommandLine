@@ -26,13 +26,12 @@ class showMenu(object):
         print("TCP settings menu:")
         print("   1. Change host and/or port")
         print("   2. Test current connection")
-        print("   3. Enable/Disable startup autoconnect")
+        print("   3. Enable/Disable startup auto-connect")
     
     def transit(self):
         print("Transit menu:")
-        print("   1. Provide transit point coordinates (Dec/RA)")
-        print("   2. Choose time for the currently chosen object")
-        print("   3. Return to main menu")
+        print("   1. Choose time for the currently chosen object")
+        print("   2. Return to main menu")
     
     def object(self):
         print("Object choice menu:")
