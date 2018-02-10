@@ -6,7 +6,7 @@ class TCPClient(object):
         self.sock_exst = False #Indicate that a socket does not object exist
         self.sock_connected = False #Indicate that there is currently no connection
         self.sock = self.createSocket()
-        autocon = cfgData.getTCPAutoConnStatus() #See if autoconnection at startup is enabled
+        autocon = cfgData.getTCPAutoConnStatus() #See if auto-connection at startup is enabled
         if autocon == "yes":
             host = cfgData.getHost()
             port = cfgData.getPort()
@@ -44,4 +44,15 @@ class TCPClient(object):
                 response = self.sock.recv(1024).decode('utf-8')
                 return response
             except:
+                return "No answer"
+    
+    def longWait_rcv(self, time):
+        if self.sock_connected:
+            self.sock.settimeout(time)
+            try:
+                response = self.sock.recv(1024).decode('utf-8')
+                self.sock.settimeout(20)
+                return response
+            except:
+                self.sock.settimeout(20)
                 return "No answer"
