@@ -1,28 +1,35 @@
 #!/usr/local/bin/python
 
-from User_Interface import uInterface
-from configData import confData
-from TCPClient import TCPClient
-#from logData import logData
+import User_Interface
+import configData
+import TCPClient
+import logData
 import sys
 
 if __name__ == '__main__':
-    #Exception handling code for the XML file proccess
+    logdata = logData.logData(__name__)
+    
+    #Exception handling code for the XML file process
     try:
-        cfgData = confData("settings.xml")
+        cfgData = configData.confData("settings.xml")
     except Exception as e:
         print("There is a problem with the XML file handling.\n%s" %e)
-        sys.exit(1) #Terminate the script
+        logdata.log("EXCEPT", "There is a problem with the XML file handling. Program terminates.", __name__)
+        exit(1) #Terminate the script
     
     #Exception handling code for the TCP initial setup
     try:
-        tcpClient = TCPClient(cfgData)
+        tcpClient = TCPClient.TCPClient(cfgData)
     except Exception as e:
         print("There is a problem with the TCP handling.\n%s" %e)
-        sys.exit(1) #Terminate the script
+        logdata.log("EXCEPT", "There is a problem with the TCP handling. Program terminates.", __name__)
+        exit(1) #Terminate the script
     
     #General exception handling code
     try:
-        uInterface(cfgData, tcpClient) #Initiate the user interface
-    except Exception as e:
-        print("Something really bad happened!! We should terminate.\n%s" %e)
+        User_Interface.uInterface(cfgData, tcpClient) #Initiate the user interface
+    except:
+        print("Something really bad happened!! We should terminate.\n")
+        logdata.log("EXCEPT", "Something really bad happened!! See the traceback below.", __name__)
+        exit(1) #Terminate the script
+    logdata.logClose()
