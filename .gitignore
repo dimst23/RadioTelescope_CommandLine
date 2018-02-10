@@ -215,4 +215,7 @@ $RECYCLE.BIN/
 # XML settings files
 *.xml
 
+# Exclude LOG files
+*.log
+
 # End of https://www.gitignore.io/api/c,c++,linux,python,windows
