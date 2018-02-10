@@ -6,7 +6,7 @@ class showMenu(object):
         print("**  by Dimitrios Stoupis - dstoupis@auth.gr  **")
         print("***********************************************")
         
-    def main(self):
+    def main_con(self):
         print("Main Menu:")
         print("   1. Read Position")
         print("   2. Choose object")
@@ -16,6 +16,13 @@ class showMenu(object):
         print("   4. TCP settings")
         print("   5. Location settings")
         print("   6. Exit program")
+        
+    def main_nocon(self):
+        print("Main Menu (Some choices hidden):")
+        print("   1. Choose object")
+        print("   2. TCP settings")
+        print("   3. Location settings")
+        print("   4. Exit program")
     
     def location(self):
         print("Location Menu:")
