@@ -2,6 +2,7 @@
 import os
 import ephem
 import time
+import logData
 from showMenu import showMenu
 from time import sleep
 
@@ -18,12 +19,13 @@ class uInterface(object):
         self.clientSocket = clientSocket
         self.cfgData = cfgData
         self.observer = ephem.Observer()
+        self.logdata = logData.logData(__name__)
         self.mainMenu()
     
     def mainMenu(self):
         while(True):
             lalon = self.cfgData.getLatLon()
-            self.observer.lon, self.observer.lat = lalon[1], lalon[0]
+            self.observer.lon, self.observer.lat = lalon[1], lalon[0] #Set the observer location according to the saved settings
             print("Getting TCP connection status...")
             conStatus = self.clientSocket.sendRequest("Test") #Get the connection status
             #sleep(1) #Use that in order for the user to be able and see the message
@@ -31,6 +33,7 @@ class uInterface(object):
             
             #Get the currently saved object
             cur_obj = self.cfgData.getObject()
+            hostport = [self.cfgData.getHost(), self.cfgData.getPort()]
             
             #Create the necessary string according to the auto-connection setting
             if self.cfgData.getTCPAutoConnStatus() == "yes":
@@ -47,11 +50,12 @@ class uInterface(object):
             print("         >Altitude:    %s" %self.cfgData.getAltitude() + "m")
             print("   [*]TCP status:")
             if conStatus == "OK":
-                print("         >Connected to %s:%s" %(self.cfgData.getHost(), self.cfgData.getPort()))
+                print("         >Connected to %s:%s" %(hostport[0], hostport[1]))
                 print("         >Autoconnect: %s" %autoCon_st)
             else:
                 print("         >Disconnected")
                 print("         >Autoconnect: %s" %autoCon_st)
+                self.logdata.log("WARNING", "Could not connect to %s:%s and the auto-connection is %s." %(hostport[0], hostport[1], autoCon_st), "mainMenu")
             print("   [*]Selected object:")
             if cur_obj[1] == -1:
                 print("         >Name: %s" %cur_obj[0])
@@ -61,38 +65,59 @@ class uInterface(object):
                 print("         >DEC:  %s" %cur_obj[2])
             print("***********************************************")
             
-            showMenu().main() #Show the main menu items
-            choice = input("Enter your menu choice: ")
-            
-            if choice == "1":
-                self.positionMenu()
-            elif choice == "2":
-                self.objectMenu()
-            elif choice == "3":
-                #self.controlMenu()
-                self.transitMenu()
-                #self.trackingMenu()
-            elif choice == "4":
-                self.TCPMenu()
-            elif choice == "5":
-                self.locationMenu()
-            elif choice == "6":
-                #Additional code may be added if some other processes are active, to terminate them
-                print("\nDisconnecting from server...")
-                if self.clientSocket.sendRequest("Terminate") == "Bye":
-                    
-                    print("Successfully disconnected from server.")
-                else:
-                    print("There was a problem contacting the server, although the connection was closed.")
-                self.clientSocket.disconnect()
-                print("\nGoodbye! See you again later!")
-                sleep(2)
-                break #Terminate the program
+            #Show the correct menu according to the connection status with the server
+            if conStatus == "OK":
+                showMenu().main_con() #Show the main menu items
+                choice = input("Enter your menu choice: ")
+                
+                if choice == "1":
+                    self.positionMenu()
+                elif choice == "2":
+                    self.objectMenu()
+                elif choice == "3":
+                    #self.controlMenu()
+                    self.transitMenu()
+                    #self.trackingMenu()
+                elif choice == "4":
+                    self.TCPMenu()
+                elif choice == "5":
+                    self.locationMenu()
+                elif choice == "6":
+                    #Additional code may be added if some other processes are active, to terminate them
+                    print("\nDisconnecting from server...")
+                    if self.clientSocket.sendRequest("Terminate") == "Bye":
+                        
+                        print("Successfully disconnected from server.")
+                        self.logdata.log("INFO", "Successfully disconnected from server.", "mainMenu")
+                    else:
+                        print("There was a problem contacting the server, although the connection was closed.")
+                        self.logdata.log("WARNING", "There was a problem contacting the server, although the connection was closed.", "mainMenu")
+                    self.clientSocket.disconnect()
+                    self.logdata.logClose()
+                    print("\nGoodbye! See you again later!")
+                    sleep(2)
+                    break #Terminate the program
+            else:
+                showMenu().main_nocon()
+                choice = input("Enter your menu choice: ")
+                
+                if choice == "1":
+                    self.objectMenu()
+                elif choice == "2":
+                    self.TCPMenu()
+                elif choice == "3":
+                    self.locationMenu()
+                elif choice == "4":
+                    #Additional code may be added if some other processes are active, to terminate them
+                    self.logdata.logClose()
+                    print("\nGoodbye! See you again later!")
+                    sleep(2)
+                    break #Terminate the program
 
     def locationMenu(self):
         wrong_ch = False #Indicate if there is a wrong choice input from the user
         
-        s_latlon = self.cfgData.getLatLon() #First element is latitude and second element is logitude
+        s_latlon = self.cfgData.getLatLon() #First element is latitude and second element is longitude
         s_alt = self.cfgData.getAltitude() #Get the altitude from the settings file
         
         while(True):
@@ -244,7 +269,7 @@ class uInterface(object):
                     If both are the same, just return to the TCP menu.
                     First ask the user if the values entered are accepted and then move on.
                     If there are new values entered, and the user accepts them, inform the user that the current connection, if any, will be aborted,
-                    And the values are going to be chaged.
+                    And the values are going to be changed.
                     Also ask the user if he wants a connection to be made with the new values.
                 '''
                 if acc == "y":
@@ -256,9 +281,11 @@ class uInterface(object):
                         if self.clientSocket.sendRequest("Terminate") == "Bye":
                             self.clientSocket.disconnect() #Disconnect from the current connection
                             print("Disconnected from server.")
+                            self.logdata.log("INFO", "TCP disconnected from server.", "TCPMenu")
                             serv_change = True
                         else:
                             print("Couldn\'t terminate properly, but the new settings will be saved.")
+                            self.logdata.log("WARNING", "Couldn\'t terminate properly, but the new settings will be saved.", "TCPMenu")
                         self.cfgData.setHost(host) #Save the host in the settings file
                         self.cfgData.setPort(port) #Save the port in the settings file
                         s_host = host #Update the saved host
@@ -272,9 +299,10 @@ class uInterface(object):
                     if acc == "y":
                         self.clientSocket.connect(s_host, s_port) #Connect to the new server
                         if self.clientSocket.sendRequest("Test") == "OK":
-                            print("Succesfully connected with the server.")
+                            print("Successfully connected with the server.")
                         else:
                             print("There was a communication problem with the server.")
+                            self.logdata.log("WARNING", "There was a communication problem with the server.", "TCPMenu")
                     sleep(1) #Pause for one second so the message is visible
                 continue #Stay in the TCP menu
                 
@@ -283,19 +311,20 @@ class uInterface(object):
                 print("The details of the server are %s:%s" %(s_host, s_port))
                 conStatus = self.clientSocket.sendRequest("Test")
                 
-                #Output messages according to the prevoius result of connection status
+                #Output messages according to the previous result of connection status
                 if conStatus == "OK":
                     print("\nSuccesfully contacted the server.")
                 else:
-                    print("\nUnfortunately, communication with the server was imposible.")
+                    print("\nUnfortunately, communication with the server was impossible.")
+                    self.logdata.log("WARNING", "Unfortunately, communication with the server was impossible.", "TCPMenu")
                 sleep(2) #Keep the message for two seconds
                 
             elif choice == "3":
                 if s_autocon == "yes":
-                    self.cfgData.TCPAutoConnDisable() #Disable the autoconnection and save the setting
+                    self.cfgData.TCPAutoConnDisable() #Disable the auto-connection and save the setting
                     s_autocon = self.cfgData.getTCPAutoConnStatus()
                 else:
-                    self.cfgData.TCPAutoConnEnable() #Enable the autoconnection and save the setting
+                    self.cfgData.TCPAutoConnEnable() #Enable the auto-connection and save the setting
                     s_autocon = self.cfgData.getTCPAutoConnStatus()
                     
             elif choice == "4":
@@ -310,6 +339,7 @@ class uInterface(object):
                             print("And also made contact with the server.")
                     else:
                         print("Failed to connect to the server %s:%s" %(s_host, s_port))
+                        self.logdata.log("WARNING", "Failed to connect to the server %s:%s" %(s_host, s_port), "TCPMenu")
                     sleep(2)
             
             #Choice No.5 will be available if an only if the client is not connected to the server
@@ -342,7 +372,7 @@ class uInterface(object):
             
             if choice == "1":
                 self.cls()
-                print("Give a transit time which is after the time that enter will be pressed.")
+                print("Give a transit time, in 24hr format, which is after the time that enter will be pressed (at least 1 minute).")
                 print("For better results, provide a time at least 10 minutes from the current time.")
                 tim = input("Give the transit time in UTC by separating hours, minutes, seconds with ':' (e.g. '20:12:34'): ")
                 
@@ -353,15 +383,17 @@ class uInterface(object):
                     The above string will be used as an input to calculate the ephemeris data of the non stationary bodies.
                     time.gmtime(), tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec
                 '''
+                t_obj = time.gmtime() #Get the return from the gmtime function to use it in the date creation
                 while(True):
                     temp = tim.split(":")
                     if int(temp[0]) < 24 or int(temp[1]) <= 59 or int(temp[2]) <= 59:
-                        break
-                    else:
-                        tim = input("Please enter a correct time: ")
+                        if int(temp[0]) > int(t_obj.tm_hour) or ((int(t_obj.tm_hour) == int(temp[0])) 
+                            and (int(t_obj.tm_min) - (int(temp[1])) is not 0) and (int(temp[1]) > int(t_obj.tm_min))):
+                            break
+                        else:
+                            tim = input("Please enter a correct time: ")
                 
                 #If everything succeeds from the control, then move on with the following
-                t_obj = time.gmtime() #Get the return from the gmtime function to use it in the date creation
                 date = "%s/%s/%s" %(t_obj.tm_year, t_obj.tm_mon, t_obj.tm_mday) #Save the date in a string in the appropriate format
                 eph_t_date = "%s %s" %(date, tim) #Make the correct date time string to be used to calculated ephemeris
                 
@@ -386,24 +418,25 @@ class uInterface(object):
                     obj_dec = float(chosen_body[2])
                 #The hour angle of the object is LST (Local Sidereal Time) - a (Right Ascension)
                 self.observer.date = eph_t_date
-                print("Sidereal Time is: %s" %(float(self.observer.sidereal_time())*_rad_to_deg))
-                print("RA is: %s" %obj_ra)
                 hour_ang = float(self.observer.sidereal_time())*_rad_to_deg - obj_ra #ephem sidereal returns in rad
                 #Add control for the negative value of the hour angle
                 #When the hour angle is negative then add 360 to make it positive if you wish, or indicate leftward direction, provided that the 0 position is south
-                print("The hour angle is: %s" %hour_ang)
-                print("The declination is: %s" %obj_dec)
+                self.logdata.log("INFO", "Transit command sent\nObject: %s\nSidereal Time: %s\nRA: %s\nDEC: %s\nThe hour angle: %s" 
+                    %(chosen_body[0], float(self.observer.sidereal_time())*_rad_to_deg, obj_ra, obj_dec, hour_ang), "transitMenu")
                 #sleep(5) #Used for testing
                 
                 #Send the request for the transit along with the required information to the Raspberry Pi
                 rsp = self.clientSocket.sendRequest("TRNST_RA_%s_DEC_%s" %(hour_ang, obj_dec)) #Send the transit request and get the response
+                if rsp == "No answer":
+                    rsp = self.clientSocket.longWait_rcv(60) #Wait to receive the response for 60 seconds, because the dish can take time to reach position
                 
                 if rsp == "POSITION_SET":
                     print("The telescope is at its position for transit.")
+                    self.logdata.log("INFO", "The telescope is at its position for transit.", "transitMenu")
                 else:
                     print("There was a problem with setting the telescopes position. %s" %rsp)
+                    self.logdata.log("WARNING", "There was a problem with setting the telescopes position. Server sent: %s" %rsp, "transitMenu")
                 
-                #Add control
             elif choice == "2":
                 break
 
@@ -522,6 +555,7 @@ class uInterface(object):
             cur_pos = self.clientSocket.sendRequest("Report Position") #Take the position of the radio telescope
             if (cur_pos == "No answer") or (cur_pos == None):
                 print("Can not get the current position of the system.")
+                self.logdata.log("ERROR", "Can not get the current position of the system.")
             else:
                 cur_pos = cur_pos.split("_")
                 print("The current position of the radio telescope is:")
