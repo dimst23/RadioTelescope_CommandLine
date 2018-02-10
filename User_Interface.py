@@ -7,6 +7,12 @@ from time import sleep
 
 _rad_to_deg = 57.2957795131
 
+#General Notes
+'''
+   Include returning to home position when closing the program 
+'''
+
+
 class uInterface(object):
     def __init__(self, cfgData, clientSocket):
         self.clientSocket = clientSocket
@@ -26,7 +32,7 @@ class uInterface(object):
             #Get the currently saved object
             cur_obj = self.cfgData.getObject()
             
-            #Create the necessary string according to the autoconnection setting
+            #Create the necessary string according to the auto-connection setting
             if self.cfgData.getTCPAutoConnStatus() == "yes":
                 autoCon_st = "Enabled"
             else:
@@ -64,8 +70,8 @@ class uInterface(object):
                 self.objectMenu()
             elif choice == "3":
                 #self.controlMenu()
-                #self.transitMenu()
-                self.trackingMenu()
+                self.transitMenu()
+                #self.trackingMenu()
             elif choice == "4":
                 self.TCPMenu()
             elif choice == "5":
@@ -310,10 +316,9 @@ class uInterface(object):
             elif (choice == "5") and (conStatus != "OK"):
                 break #Return to main menu
             else:
-                wrong_ch = True #Reiterrate. Show the appropriate message to the user
+                wrong_ch = True #Reiterate. Show the appropriate message to the user
 
     def transitMenu(self):
-        mancoord = False
         obj_ra = "-1"
         obj_dec = "-1"
         man_ra = "-1"
@@ -324,42 +329,28 @@ class uInterface(object):
             self.cls() #Clear the previous menu before showing the new one
             print("***********************************************")
             
-            if mancoord:
-                print("   [*]Manual coordinates:")
-                print("         >RA:   %s" %man_ra)
-                print("         >DEC:  %s" %man_dec)
+            print("   [*]Selected object:")
+            if chosen_body[1] == -1:
+                print("         >Name: %s" %chosen_body[0])
             else:
-                print("   [*]Selected object:")
-                if chosen_body[1] == -1:
-                    print("         >Name: %s" %chosen_body[0])
-                else:
-                    print("         >Name: %s" %chosen_body[0])
-                    print("         >RA:   %s" %chosen_body[1])
-                    print("         >DEC:  %s" %chosen_body[2])
+                print("         >Name: %s" %chosen_body[0])
+                print("         >RA:   %s" %chosen_body[1])
+                print("         >DEC:  %s" %chosen_body[2])
             print("***********************************************")
             showMenu().transit()
             choice = input("Enter your menu choice: ")
             
-            #Add control for manual coordinate entrance
-            #If new coordinates entered then set the mancoord variable
-            
             if choice == "1":
-                self.cls()
-                print("Manual coordinate menu.")
-                man_ra = input("Please enter the desired RA of the object: ")
-                man_dec = input("Please enter the desired DEC of the object: ")
-                mancoord = True
-            elif choice == "2":
                 self.cls()
                 print("Give a transit time which is after the time that enter will be pressed.")
                 print("For better results, provide a time at least 10 minutes from the current time.")
-                tim = input("Give the transit time in UTC by seperating hours, minutes, seconds with ':' (e.g. '20:12:34'): ")
+                tim = input("Give the transit time in UTC by separating hours, minutes, seconds with ':' (e.g. '20:12:34'): ")
                 
                 '''
                     Get the time from the user and then check if it is the same as the current time.
                     If it is then inform the user and ask for another entry.
-                    If the time is good, then procced by taking the current date and combining it with the given time in a string.
-                    The above string will be used as an input to calculate the ephimeris data of the non stationary bodies.
+                    If the time is good, then proceed by taking the current date and combining it with the given time in a string.
+                    The above string will be used as an input to calculate the ephemeris data of the non stationary bodies.
                     time.gmtime(), tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec
                 '''
                 while(True):
@@ -369,49 +360,57 @@ class uInterface(object):
                     else:
                         tim = input("Please enter a correct time: ")
                 
-                #If everything succeds from the control, then move on with the following
+                #If everything succeeds from the control, then move on with the following
                 t_obj = time.gmtime() #Get the return from the gmtime function to use it in the date creation
                 date = "%s/%s/%s" %(t_obj.tm_year, t_obj.tm_mon, t_obj.tm_mday) #Save the date in a string in the appropriate format
-                eph_t_date = "%s %s" %(date, tim) #Make the correct date time string to be used to calculated ephimeris
+                eph_t_date = "%s %s" %(date, tim) #Make the correct date time string to be used to calculated ephemeris
                 
-                if not mancoord:
-                    if chosen_body[0] == "Sun":
-                        sun = ephem.Sun()
-                        sun.compute(eph_t_date, epoch=date) #Calculate ephimeris at the current date
-                        obj_ra = float(sun.a_ra)*_rad_to_deg
-                        obj_dec = float(sun.a_dec)*_rad_to_deg
-                    elif chosen_body[0] == "Moon":
-                        moon = ephem.Moon()
-                        moon.compute(eph_t_date, epoch=date) #Calculate ephimeris at the current date
-                        obj_ra = float(moon.a_ra)*_rad_to_deg
-                        obj_dec = float(moon.a_dec)*_rad_to_deg
-                    elif chosen_body[0] == "Jupiter":
-                        jup = ephem.Jupiter()
-                        jup.compute(eph_t_date, epoch=date) #Calculate ephimeris at the current date
-                        obj_ra = float(jup.a_ra)*_rad_to_deg
-                        obj_dec = float(jup.a_dec)*_rad_to_deg
-                    else:
-                    #Add control to what to do with stationary bodies
-                        obj_ra = float(chosen_body[1])
-                        obj_dec = float(chosen_body[2])
+                if chosen_body[0] == "Sun":
+                    sun = ephem.Sun()
+                    sun.compute(eph_t_date, epoch=date) #Calculate ephemeris at the current date
+                    obj_ra = float(sun.a_ra)*_rad_to_deg
+                    obj_dec = float(sun.a_dec)*_rad_to_deg
+                elif chosen_body[0] == "Moon":
+                    moon = ephem.Moon()
+                    moon.compute(eph_t_date, epoch=date) #Calculate ephemeris at the current date
+                    obj_ra = float(moon.a_ra)*_rad_to_deg
+                    obj_dec = float(moon.a_dec)*_rad_to_deg
+                elif chosen_body[0] == "Jupiter":
+                    jup = ephem.Jupiter()
+                    jup.compute(eph_t_date, epoch=date) #Calculate ephemeris at the current date
+                    obj_ra = float(jup.a_ra)*_rad_to_deg
+                    obj_dec = float(jup.a_dec)*_rad_to_deg
+                else:
+                #Add control to what to do with stationary bodies
+                    obj_ra = float(chosen_body[1])
+                    obj_dec = float(chosen_body[2])
                 #The hour angle of the object is LST (Local Sidereal Time) - a (Right Ascension)
                 self.observer.date = eph_t_date
-                print("Sidereal Time is: %s" %float(self.observer.sidereal_time())*_rad_to_deg)
+                print("Sidereal Time is: %s" %(float(self.observer.sidereal_time())*_rad_to_deg))
                 print("RA is: %s" %obj_ra)
                 hour_ang = float(self.observer.sidereal_time())*_rad_to_deg - obj_ra #ephem sidereal returns in rad
                 #Add control for the negative value of the hour angle
+                #When the hour angle is negative then add 360 to make it positive if you wish, or indicate leftward direction, provided that the 0 position is south
                 print("The hour angle is: %s" %hour_ang)
-                sleep(5)
+                print("The declination is: %s" %obj_dec)
+                #sleep(5) #Used for testing
                 
                 #Send the request for the transit along with the required information to the Raspberry Pi
-                #rsp = self.cfgData.sendRequest("TRNST_RA_%s_DEC_%s" %(hour_ang, obj_dec)) #Send the transit request and get the response
+                rsp = self.clientSocket.sendRequest("TRNST_RA_%s_DEC_%s" %(hour_ang, obj_dec)) #Send the transit request and get the response
+                
+                if rsp == "POSITION_SET":
+                    print("The telescope is at its position for transit.")
+                else:
+                    print("There was a problem with setting the telescopes position. %s" %rsp)
                 
                 #Add control
-            elif choice == "3":
+            elif choice == "2":
                 break
 
     #def controlMenu(self):
-        
+        #Show the currently chosen object
+        #Show if the telescope is now tracking or not (check that by asking the appropriate command through the TCP)
+        #Show the current position of the telescope if not tracking (use the appropriate command to get the dish's position)
     
     def trackingMenu(self):
         chosen_body = self.cfgData.getObject() #Get the currently chosen object
@@ -475,12 +474,17 @@ class uInterface(object):
         ans = input("\nDo you want to start tracking? Enter 'y' for yes or anything to quit tracking: ")
         if ans == "y":
             #Send the command and get the response
-            #response = self.clientSocket.sendRequest("AAF_RA_%f_ROC_%f_DEC_%f_ROC_%f_TIM_%f" %(obj_ra, roc_ra, obj_dec, roc_dec, float(track_time)))
+            response = self.clientSocket.sendRequest("AAF_RA_%f_ROC_%f_DEC_%f_ROC_%f_TIM_%f" %(obj_ra, roc_ra, obj_dec, roc_dec, float(track_time)))
             print("AAF_RA_%f_ROC_%f_DEC_%f_ROC_%f_TIM_%f" %(obj_ra, roc_ra, obj_dec, roc_dec, float(track_time)))
             sleep(3)
         else:
             return 1
         #Add more control
+        if response == "AIM_CENTERED_TRK_STARTED":
+            print("Tracking successfully started.")
+            sleep(3)
+        else:
+            print("There was a problem with the tracking, try again or fix the problem.")
         
     #def scanningMenu(self):
         
