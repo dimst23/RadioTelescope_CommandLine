@@ -47,3 +47,11 @@ class showMenu(object):
         print("   3. Jupiter")
         print("   4. Enter an object manually")
         print("   5. Return to main menu")
+    
+    def control(self):
+        print("Radio Telescope control menu:")
+        print("   1. Transit")
+        print("   2. Tracking")
+        print("   3. Scanning while tracking")
+        print("   4. Sky scanning")
+        print("   5. Return to main menu")
