@@ -1,33 +1,33 @@
 #Import the required libraries
-import os
-import ephem
-import time
-import logData
 from showMenu import showMenu
 from time import sleep
+import logData
+import ephem
+import time
+import os
 
-_rad_to_deg = 57.2957795131
+_rad_to_deg = 57.2957795131 #Conversion constant for converting rad to degrees
 
 #General Notes
 '''
    Include returning to home position when closing the program 
 '''
 
-
 class uInterface(object):
     def __init__(self, cfgData, clientSocket):
-        self.clientSocket = clientSocket
-        self.cfgData = cfgData
-        self.observer = ephem.Observer()
-        self.logdata = logData.logData(__name__)
-        self.mainMenu()
+        lalon = cfgData.getLatLon() #Get the current latitude longitude for the observer
+        self.clientSocket = clientSocket #Set a TCP client socket handling variable
+        self.cfgData = cfgData #Set the XML file's handling variable
+        self.observer = ephem.Observer() #Set an observer variable
+        self.observer.lon, self.observer.lat = lalon[1], lalon[0] #Set the current observer position according to the currently saved settings
+        self.logdata = logData.logData(__name__) #Initiate a logger for the current file
+        self.mainMenu() #Start the main menu
     
     def mainMenu(self):
         while(True):
-            lalon = self.cfgData.getLatLon()
-            self.observer.lon, self.observer.lat = lalon[1], lalon[0] #Set the observer location according to the saved settings
-            print("Getting TCP connection status...")
+            print("Getting TCP connection status...") #Tell the user that the program is waiting for the TCP connection (20 second timeout)
             conStatus = self.clientSocket.sendRequest("Test") #Get the connection status
+            choice = "" #User input variable which is required to be global for this function
             #sleep(1) #Use that in order for the user to be able and see the message
             self.cls() #Clear the previous menu before showing the new one
             
@@ -67,17 +67,19 @@ class uInterface(object):
             
             #Show the correct menu according to the connection status with the server
             if conStatus == "OK":
-                showMenu().main_con() #Show the main menu items
-                choice = input("Enter your menu choice: ")
+                showMenu().main_con() #Show the all main menu items
+                try:
+                    choice = input("Enter your menu choice: ")
+                except EOFError:
+                    self.logdata.log("WARNING", "User requested termination with a keyboard interrupt.", "mainMenu")
+                    pass
                 
                 if choice == "1":
                     self.positionMenu()
                 elif choice == "2":
                     self.objectMenu()
                 elif choice == "3":
-                    #self.controlMenu()
-                    self.transitMenu()
-                    #self.trackingMenu()
+                    self.controlMenu()
                 elif choice == "4":
                     self.TCPMenu()
                 elif choice == "5":
@@ -86,20 +88,23 @@ class uInterface(object):
                     #Additional code may be added if some other processes are active, to terminate them
                     print("\nDisconnecting from server...")
                     if self.clientSocket.sendRequest("Terminate") == "Bye":
-                        
                         print("Successfully disconnected from server.")
                         self.logdata.log("INFO", "Successfully disconnected from server.", "mainMenu")
                     else:
                         print("There was a problem contacting the server, although the connection was closed.")
                         self.logdata.log("WARNING", "There was a problem contacting the server, although the connection was closed.", "mainMenu")
-                    self.clientSocket.disconnect()
-                    self.logdata.logClose()
+                    self.clientSocket.disconnect() #Disconnect from the server before closing the program
+                    self.logdata.logClose() #Terminate all logging processes before exiting the program
                     print("\nGoodbye! See you again later!")
-                    sleep(2)
+                    sleep(2) #Used to keep the above message alive for the user to see it
                     break #Terminate the program
             else:
-                showMenu().main_nocon()
-                choice = input("Enter your menu choice: ")
+                showMenu().main_nocon() #Show restricted menu items because there is no connection with the TCP server
+                try:
+                    choice = input("Enter your menu choice: ")
+                except EOFError:
+                    self.logdata.log("WARNING", "User requested termination with a keyboard interrupt.", "mainMenu")
+                    pass
                 
                 if choice == "1":
                     self.objectMenu()
@@ -109,13 +114,13 @@ class uInterface(object):
                     self.locationMenu()
                 elif choice == "4":
                     #Additional code may be added if some other processes are active, to terminate them
-                    self.logdata.logClose()
+                    self.logdata.logClose() #Terminate all logging processes before exiting the program
                     print("\nGoodbye! See you again later!")
-                    sleep(2)
+                    sleep(2) #Used to keep the above message alive for the user to see it
                     break #Terminate the program
 
     def locationMenu(self):
-        wrong_ch = False #Indicate if there is a wrong choice input from the user
+        choice = "" #User input variable which is required to be global for this function
         
         s_latlon = self.cfgData.getLatLon() #First element is latitude and second element is longitude
         s_alt = self.cfgData.getAltitude() #Get the altitude from the settings file
@@ -128,6 +133,7 @@ class uInterface(object):
             print("****************************")
             if loc_updt == "yes":
                 print("->Currently set location (updated):")
+                self.locupdate = True
                 self.cfgData.setUpdateStatus("location", "no")
             else:
                 print("->Currently set location:")
@@ -138,11 +144,12 @@ class uInterface(object):
             
             showMenu().location() #Show the menu items for the location
             
-            #Handle what happens with a wrong input
-            if wrong_ch:
-                choice = input("Enter a correct number please: ")
-            else:
+            #Get the input from user
+            try:
                 choice = input("Enter your menu choice: ")
+            except EOFError:
+                self.logdata.log("WARNING", "User requested termination with a keyboard interrupt.", "locationMenu")
+                pass
             
             if choice == "1":
                 self.cls() #Clear the screen for the new menu
@@ -172,12 +179,10 @@ class uInterface(object):
                         self.cfgData.setAltitude(s_alt)
                         s_latlon = [lat, lon]
                         s_alt = alt
-                        self.observer.lat, self.observer.lon = s_latlon[0], s_latlon[1]
+                        self.observer.lat, self.observer.lon = s_latlon[0], s_latlon[1] #Also update the current observer
                     continue
             elif choice == "2":
                 break #Get out from the loop and return to main menu
-            else:
-                wrong_ch = True
 
     def TCPMenu(self):
         wrong_ch = False #Wrong choice indicator
@@ -227,11 +232,15 @@ class uInterface(object):
                 print("   4. Return to main menu")
             
             #Wrong choice input handling
-            if wrong_ch:
-                choice = input("Enter a correct number please: ")
-                wrong_ch = False
-            else:
-                choice = input("Enter your menu choice: ")
+            try:
+                if wrong_ch:
+                    choice = input("Enter a correct number please: ")
+                else:
+                    choice = input("Enter your menu choice: ")
+                wrong_ch == False #Reset the indicator
+            except EOFError:
+                self.logdata.log("WARNING", "User requested termination with a keyboard interrupt.", "TCPMenu")
+                pass
             
             if choice == "1":
                 self.cls() #Clear the previous menu before showing the new one
@@ -251,9 +260,11 @@ class uInterface(object):
                     try:
                         port = int(input("Port: "), 10) #Convert string from input to decimal integer
                         break
-                    except:
+                    except ValueError:
                         wrong_ch = True
                         continue
+                    except:
+                        pass
                 
                 #Provide the user with a summary of what was entered
                 print("\nThe entered parameters for the server are:")
@@ -274,14 +285,14 @@ class uInterface(object):
                 '''
                 if acc == "y":
                     if (s_host == host) and (s_port == port):
-                        self.cfgData.setUpdateStatus("TCP", "no")
-                        serv_change = False
+                        self.cfgData.setUpdateStatus("TCP", "no") #Indicate that no update has been made
+                        serv_change = False #Make sure the change indicator is set to False
                     else:
                         print("\nDisconnecting from server...")
                         if self.clientSocket.sendRequest("Terminate") == "Bye":
                             self.clientSocket.disconnect() #Disconnect from the current connection
-                            print("Disconnected from server.")
-                            self.logdata.log("INFO", "TCP disconnected from server.", "TCPMenu")
+                            print("Disconnected from server.") #Inform the user for successful disconnection
+                            self.logdata.log("INFO", "TCP disconnected from server.", "TCPMenu") #Log the server disconnection
                             serv_change = True
                         else:
                             print("Couldn\'t terminate properly, but the new settings will be saved.")
@@ -309,7 +320,7 @@ class uInterface(object):
             elif choice == "2":
                 print("\nTrying to connect to the server.")
                 print("The details of the server are %s:%s" %(s_host, s_port))
-                conStatus = self.clientSocket.sendRequest("Test")
+                conStatus = self.clientSocket.sendRequest("Test") #Send the test command to the server and await for its response
                 
                 #Output messages according to the previous result of connection status
                 if conStatus == "OK":
@@ -318,7 +329,8 @@ class uInterface(object):
                     print("\nUnfortunately, communication with the server was impossible.")
                     self.logdata.log("WARNING", "Unfortunately, communication with the server was impossible.", "TCPMenu")
                 sleep(2) #Keep the message for two seconds
-                
+            
+            #There is no menu for the auto-connection change, it just toggles
             elif choice == "3":
                 if s_autocon == "yes":
                     self.cfgData.TCPAutoConnDisable() #Disable the auto-connection and save the setting
@@ -348,11 +360,60 @@ class uInterface(object):
             else:
                 wrong_ch = True #Reiterate. Show the appropriate message to the user
 
+    def controlMenu(self):
+        choice = "" #User input variable
+        wrong_ch = False #Indicator of correct menu number
+        
+        while(True):
+            #Show the currently chosen object
+            chosen_body = self.cfgData.getObject() #Get the currently chosen object
+            self.cls()
+            print("***********************************************")
+            print("   [*]Selected object:")
+            if chosen_body[1] == -1:
+                print("         >Name: %s" %chosen_body[0])
+            else:
+                print("         >Name: %s" %chosen_body[0])
+                print("         >RA:   %s" %chosen_body[1])
+                print("         >DEC:  %s" %chosen_body[2])
+            print("***********************************************")
+            
+            #Show if the telescope is now tracking or not (check that by asking the appropriate command through the TCP)
+            #Show the current position of the telescope if not tracking (use the appropriate command to get the dish's position)
+            
+            showMenu().control() #Show the menu options
+            try:
+                if wrong_ch:
+                    choice = input("Please provide a correct number: ")
+                else:
+                    choice = input("Enter your menu choice: ")
+                wrong_ch == False #Reset the indicator
+            except EOFError:
+                self.logdata.log("WARNING", "User requested termination with a keyboard interrupt.", "controlMenu")
+                pass
+            
+            if choice == "1":
+                self.transitMenu()
+            elif choice == "2":
+                self.trackingMenu()
+            elif choice == "3":
+                #self.scanningMenu()
+                break #Added until the above function is complete
+            elif choice == "4":
+                #self.skyscanMenu()
+                break #Added until the above function is complete
+            elif choice == "5":
+                break #Return to main menu
+            else:
+                wrong_ch = True #Indicate a wrong choice input
+    
     def transitMenu(self):
+        #Declare some variable that are later required and initialize them
         obj_ra = "-1"
         obj_dec = "-1"
         man_ra = "-1"
         man_dec = "-1"
+        choice = "" #User input variable
         
         while(True):
             chosen_body = self.cfgData.getObject() #Get the currently chosen object
@@ -367,8 +428,13 @@ class uInterface(object):
                 print("         >RA:   %s" %chosen_body[1])
                 print("         >DEC:  %s" %chosen_body[2])
             print("***********************************************")
-            showMenu().transit()
-            choice = input("Enter your menu choice: ")
+            
+            showMenu().transit() #Show the user interface for this menu
+            try:
+                choice = input("Enter your menu choice: ")
+            except EOFError:
+                self.logdata.log("WARNING", "User requested termination with a keyboard interrupt.", "transitMenu")
+                pass
             
             if choice == "1":
                 self.cls()
@@ -386,7 +452,7 @@ class uInterface(object):
                 t_obj = time.gmtime() #Get the return from the gmtime function to use it in the date creation
                 while(True):
                     temp = tim.split(":")
-                    if int(temp[0]) < 24 or int(temp[1]) <= 59 or int(temp[2]) <= 59:
+                    if int(temp[0]) < 24 or int(temp[1]) <= 59 or int(temp[2]) <= 59: #Check if the time is correct
                         if int(temp[0]) > int(t_obj.tm_hour) or ((int(t_obj.tm_hour) == int(temp[0])) 
                             and (int(t_obj.tm_min) - (int(temp[1])) is not 0) and (int(temp[1]) > int(t_obj.tm_min))):
                             break
@@ -399,29 +465,31 @@ class uInterface(object):
                 
                 if chosen_body[0] == "Sun":
                     sun = ephem.Sun()
-                    sun.compute(eph_t_date, epoch=date) #Calculate ephemeris at the current date
+                    sun.compute(eph_t_date, epoch = date) #Calculate ephemeris at the current date
                     obj_ra = float(sun.a_ra)*_rad_to_deg
                     obj_dec = float(sun.a_dec)*_rad_to_deg
                 elif chosen_body[0] == "Moon":
                     moon = ephem.Moon()
-                    moon.compute(eph_t_date, epoch=date) #Calculate ephemeris at the current date
+                    moon.compute(eph_t_date, epoch = date) #Calculate ephemeris at the current date
                     obj_ra = float(moon.a_ra)*_rad_to_deg
                     obj_dec = float(moon.a_dec)*_rad_to_deg
                 elif chosen_body[0] == "Jupiter":
                     jup = ephem.Jupiter()
-                    jup.compute(eph_t_date, epoch=date) #Calculate ephemeris at the current date
+                    jup.compute(eph_t_date, epoch = date) #Calculate ephemeris at the current date
                     obj_ra = float(jup.a_ra)*_rad_to_deg
                     obj_dec = float(jup.a_dec)*_rad_to_deg
                 else:
                 #Add control to what to do with stationary bodies
                     obj_ra = float(chosen_body[1])
                     obj_dec = float(chosen_body[2])
+                
                 #The hour angle of the object is LST (Local Sidereal Time) - a (Right Ascension)
-                self.observer.date = eph_t_date
+                self.observer.date = eph_t_date #Set the observer's date
                 hour_ang = float(self.observer.sidereal_time())*_rad_to_deg - obj_ra #ephem sidereal returns in rad
+                
                 #Add control for the negative value of the hour angle
                 #When the hour angle is negative then add 360 to make it positive if you wish, or indicate leftward direction, provided that the 0 position is south
-                self.logdata.log("INFO", "Transit command sent\nObject: %s\nSidereal Time: %s\nRA: %s\nDEC: %s\nThe hour angle: %s" 
+                self.logdata.log("INFO", "Transit command sent\nObject: %s\nSidereal Time: %s\nRA: %s\nDEC: %s\nHour angle: %s" 
                     %(chosen_body[0], float(self.observer.sidereal_time())*_rad_to_deg, obj_ra, obj_dec, hour_ang), "transitMenu")
                 #sleep(5) #Used for testing
                 
@@ -438,12 +506,7 @@ class uInterface(object):
                     self.logdata.log("WARNING", "There was a problem with setting the telescopes position. Server sent: %s" %rsp, "transitMenu")
                 
             elif choice == "2":
-                break
-
-    #def controlMenu(self):
-        #Show the currently chosen object
-        #Show if the telescope is now tracking or not (check that by asking the appropriate command through the TCP)
-        #Show the current position of the telescope if not tracking (use the appropriate command to get the dish's position)
+                break      
     
     def trackingMenu(self):
         chosen_body = self.cfgData.getObject() #Get the currently chosen object
@@ -570,9 +633,9 @@ class uInterface(object):
     
     def getAngle(self, angName):
         print("\nEnter the " + angName + " in decimal degrees.")
-        print("For a south Latitude or a weste Longitude, enter a minus sign in the decimal value.")
+        print("For a south Latitude or a western Longitude, enter a minus sign in the decimal value.")
         return input(angName + ": ") #Return the angle entered by the user
     
     def cls(self):
-        os.system('cls' if os.name == 'nt' else 'clear')
-        showMenu().intro()
+        os.system('cls' if os.name == 'nt' else 'clear') #Clear command to work in windows 'nt' and Linux
+        showMenu().intro() #After clearing the screen show the intro in each call
