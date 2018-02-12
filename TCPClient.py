@@ -1,8 +1,10 @@
+import logData
 import socket
 
 class TCPClient(object):
     def __init__(self, cfgData):
         self.conf = cfgData
+        self.logd = logData.logData(__name__)
         self.sock_exst = False #Indicate that a socket does not object exist
         self.sock_connected = False #Indicate that there is currently no connection
         self.sock = self.createSocket()
@@ -10,7 +12,8 @@ class TCPClient(object):
         if autocon == "yes":
             host = cfgData.getHost()
             port = cfgData.getPort()
-            self.connect(host, port)
+            if self.connect(host, port):
+                self.logd.log("INFO", "Client successfully connected to %s:%s." %(host, port), "constructor")
     
     def createSocket(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #Create a socket object
@@ -34,7 +37,8 @@ class TCPClient(object):
             self.sock_exst = False
             self.sock_connected = False
         else:
-            self.sock_connected = False
+            self.sock_exst = False #A new socket is needed to successfully connect to a server after a lost connection
+            self.sock_connected = False #Indicate a disconnected socket
         return self.sock_connected
     
     def sendRequest(self, request):
@@ -44,6 +48,8 @@ class TCPClient(object):
                 response = self.sock.recv(1024).decode('utf-8')
                 return response
             except:
+                return "No answer"
+            else:
                 return "No answer"
     
     def longWait_rcv(self, time):
