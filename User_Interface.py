@@ -61,8 +61,8 @@ class uInterface(object):
                 print("         >Name: %s" %cur_obj[0])
             else:
                 print("         >Name: %s" %cur_obj[0])
-                print("         >RA:   %s" %cur_obj[1])
-                print("         >DEC:  %s" %cur_obj[2])
+                print("         >RA:   %s" %cur_obj[1] + u"\u00b0")
+                print("         >DEC:  %s" %cur_obj[2] + u"\u00b0")
             print("***********************************************")
             
             #Show the correct menu according to the connection status with the server
@@ -188,6 +188,10 @@ class uInterface(object):
         wrong_ch = False #Wrong choice indicator
         serv_change = False #Server change indicator
         
+        #Set the variables for the host and port input
+        port = 0 #Default value for debugging
+        host = "" #Default value for debugging
+        
         #Read TCP settings from the XML configuration file
         s_host = self.cfgData.getHost()
         s_port = int(self.cfgData.getPort())
@@ -247,8 +251,15 @@ class uInterface(object):
                 
                 #Host input section
                 print("\nEnter the server host name e.g. \"localhost\" or 127.0.0.1.\nThe current host is \'%s\'" %s_host)
-                host = input("Host: ") #Get the host name from the user
-                print("The entered host is: " + host)
+                print("If you want to keep host the same, just press enter and do not enter anything.")
+                try:
+                    host = input("Host: ") #Get the host name from the user
+                    if host == "":
+                        host = s_host
+                    else:
+                        print("The entered host is: " + host)
+                except EOFError:
+                    pass
                 
                 #Port input section
                 while(True):
@@ -257,8 +268,13 @@ class uInterface(object):
                         wrong_ch = False
                     else:
                         print("\nNow enter the server port as an integer e.g. 10001.\nThe current port is %s" %s_port)
+                        print("If you do not want to change the port and leave it as it is, just press enter.")
                     try:
-                        port = int(input("Port: "), 10) #Convert string from input to decimal integer
+                        port = input("Port: ")
+                        if port == "":
+                            port = s_port
+                        else:
+                            port = int(port, 10) #Convert string from input to decimal integer
                         break
                     except ValueError:
                         wrong_ch = True
@@ -287,7 +303,7 @@ class uInterface(object):
                     if (s_host == host) and (s_port == port):
                         self.cfgData.setUpdateStatus("TCP", "no") #Indicate that no update has been made
                         serv_change = False #Make sure the change indicator is set to False
-                    else:
+                    elif conStatus == "OK":
                         print("\nDisconnecting from server...")
                         if self.clientSocket.sendRequest("Terminate") == "Bye":
                             self.clientSocket.disconnect() #Disconnect from the current connection
@@ -295,17 +311,21 @@ class uInterface(object):
                             self.logdata.log("INFO", "TCP disconnected from server.", "TCPMenu") #Log the server disconnection
                             serv_change = True
                         else:
-                            print("Couldn\'t terminate properly, but the new settings will be saved.")
-                            self.logdata.log("WARNING", "Couldn\'t terminate properly, but the new settings will be saved.", "TCPMenu")
-                        self.cfgData.setHost(host) #Save the host in the settings file
-                        self.cfgData.setPort(port) #Save the port in the settings file
-                        s_host = host #Update the saved host
-                        s_port = port #Update the saved port
+                            print("Could not terminate properly, but the new settings will be saved.")
+                            self.logdata.log("WARNING", "Could not terminate properly, but the new settings will be saved.", "TCPMenu")
+                    else:
+                        serv_change = True #Indicate server change
+                        print("Server details changed to %s:%s" %(host, port))
+                        self.logdata.log("WARNING", "Server connection details changed to %s:%s" %(host, port), "TCPMenu")
+                    self.cfgData.setHost(host) #Save the host in the settings file
+                    self.cfgData.setPort(port) #Save the port in the settings file
+                    s_host = host #Update the saved host
+                    s_port = port #Update the saved port
                     sleep(1) #Pause for one second so the message is visible
                 
                 #If there was success in disconnecting after setting update, do the following
                 if serv_change:
-                    print("\nDo you want to establish a connection with the new server?")
+                    print("\nDo you want to establish a connection with the new server settings?")
                     acc = input("If yes type 'y', otherwise type anything: ")
                     if acc == "y":
                         self.clientSocket.connect(s_host, s_port) #Connect to the new server
@@ -315,7 +335,6 @@ class uInterface(object):
                             print("There was a communication problem with the server.")
                             self.logdata.log("WARNING", "There was a communication problem with the server.", "TCPMenu")
                     sleep(1) #Pause for one second so the message is visible
-                continue #Stay in the TCP menu
                 
             elif choice == "2":
                 print("\nTrying to connect to the server.")
@@ -343,12 +362,15 @@ class uInterface(object):
                 if conStatus == "OK": #If the program is already connected to a server, there nothing to do here
                     break
                 else: #If the program is not connected to a server, do the following
-                    print("\nConnecting to server %s:%s\n" %(s_host, s_port))
-                    if self.clientSocket.connect(s_host, s_port):
+                    self.clientSocket.disconnect() #Disconnect is used to create a new socket to enable reconnection of a lost connection
+                    print("\nConnecting to server %s:%s\n" %(s_host, s_port)) #Indicate to the user that a connection attempt will be done
+                    
+                    if self.clientSocket.connect(s_host, s_port): #On successful connection execute the following code
                         contct = self.clientSocket.sendRequest("Test") #Try to make a contact with the server
                         if contct == "OK": #If contact was made, print the following
                             print("Successfully connected to the server %s:%s" %(s_host, s_port))
                             print("And also made contact with the server.")
+                            self.logdata.log("INFO", "Client successfully connected to %s:%s." %(s_host, s_port), "TCPMenu")
                     else:
                         print("Failed to connect to the server %s:%s" %(s_host, s_port))
                         self.logdata.log("WARNING", "Failed to connect to the server %s:%s" %(s_host, s_port), "TCPMenu")
@@ -362,11 +384,29 @@ class uInterface(object):
 
     def controlMenu(self):
         choice = "" #User input variable
+        cur_pos = "" #Position holding variable
         wrong_ch = False #Indicator of correct menu number
+        serv_con = False #Server connection status indicator
         
         while(True):
             #Show the currently chosen object
             chosen_body = self.cfgData.getObject() #Get the currently chosen object
+            
+            if self.clientSocket.sendRequest("Test") == "OK":
+                #Add code to check if we are connected to the server first
+                serv_con = True #Indicate active server
+                cur_pos = self.clientSocket.sendRequest("Report Position")
+                if cur_pos == "No answer":
+                    cur_pos = "Not available"
+                    self.logdata.log("WARNING", "The current telescope position is not available.", "controlMenu")
+                else:
+                    cur_pos = cur_pos.split("_")
+                    self.logdata.log("INFO", "The current telescope position is\nRA: %s\nDEC: %s" %(cur_pos[1], cur_pos[2]), "controlMenu")
+            else:
+                self.logdata.log("WARNING", "The connection with the server has been lost.", "controlMenu")
+                serv_con = False #Indicate inactive server
+                cur_pos = "Not available"
+            
             self.cls()
             print("***********************************************")
             print("   [*]Selected object:")
@@ -374,38 +414,53 @@ class uInterface(object):
                 print("         >Name: %s" %chosen_body[0])
             else:
                 print("         >Name: %s" %chosen_body[0])
-                print("         >RA:   %s" %chosen_body[1])
-                print("         >DEC:  %s" %chosen_body[2])
+                print("         >RA:   %s" %chosen_body[1] + u"\u00b0")
+                print("         >DEC:  %s" %chosen_body[2] + u"\u00b0")
+            print("   [*]Telescope status:")
+            #Add code for tracking status checking
+            print("         >Tracking: ")
+            
+            if cur_pos == "Not available":
+                print("         >Position: %s" %cur_pos)
+            else:
+                print("         >Position: ")
+                print("             *RA:  %s" %cur_pos[1] + u"\u00b0")
+                print("             *DEC: %s" %cur_pos[2] + u"\u00b0")
             print("***********************************************")
             
             #Show if the telescope is now tracking or not (check that by asking the appropriate command through the TCP)
             #Show the current position of the telescope if not tracking (use the appropriate command to get the dish's position)
             
-            showMenu().control() #Show the menu options
-            try:
-                if wrong_ch:
-                    choice = input("Please provide a correct number: ")
+            if serv_con:
+                showMenu().control() #Show the menu options
+                try:
+                    if wrong_ch:
+                        choice = input("Please provide a correct number: ")
+                    else:
+                        choice = input("Enter your menu choice: ")
+                    wrong_ch == False #Reset the indicator
+                except EOFError:
+                    self.logdata.log("WARNING", "User requested termination with a keyboard interrupt.", "controlMenu")
+                    pass
+                
+                if choice == "1":
+                    self.transitMenu()
+                elif choice == "2":
+                    self.trackingMenu()
+                elif choice == "3":
+                    #self.scanningMenu()
+                    break #Added until the above function is complete
+                elif choice == "4":
+                    #self.skyscanMenu()
+                    break #Added until the above function is complete
+                elif choice == "5":
+                    break #Return to main menu
                 else:
-                    choice = input("Enter your menu choice: ")
-                wrong_ch == False #Reset the indicator
-            except EOFError:
-                self.logdata.log("WARNING", "User requested termination with a keyboard interrupt.", "controlMenu")
-                pass
-            
-            if choice == "1":
-                self.transitMenu()
-            elif choice == "2":
-                self.trackingMenu()
-            elif choice == "3":
-                #self.scanningMenu()
-                break #Added until the above function is complete
-            elif choice == "4":
-                #self.skyscanMenu()
-                break #Added until the above function is complete
-            elif choice == "5":
-                break #Return to main menu
+                    wrong_ch = True #Indicate a wrong choice input
             else:
-                wrong_ch = True #Indicate a wrong choice input
+                print("For some reason server is not connected so no option can be executed.")
+                input("Press enter or type anything to return to main menu: ")
+                break
     
     def transitMenu(self):
         #Declare some variable that are later required and initialize them
@@ -517,8 +572,8 @@ class uInterface(object):
             print("         >Name: %s" %chosen_body[0])
         else:
             print("         >Name: %s" %chosen_body[0])
-            print("         >RA:   %s" %chosen_body[1])
-            print("         >DEC:  %s" %chosen_body[2])
+            print("         >RA:   %s" %chosen_body[1] + u"\u00b0")
+            print("         >DEC:  %s" %chosen_body[2] + u"\u00b0")
         print("***********************************************")
         
         print("Tracking Menu")
@@ -592,6 +647,18 @@ class uInterface(object):
         #Add functionality to choose objects from a catalog
         while(True):
             self.cls() #Clear the previous menu before showing the new one
+            chosen_body = self.cfgData.getObject() #Get the currently chosen object
+            
+            print("***********************************************")
+            print("   [*]Selected object:")
+            if chosen_body[1] == -1:
+                print("         >Name: %s" %chosen_body[0])
+            else:
+                print("         >Name: %s" %chosen_body[0])
+                print("         >RA:   %s" %chosen_body[1] + u"\u00b0")
+                print("         >DEC:  %s" %chosen_body[2] + u"\u00b0")
+            print("***********************************************")
+            
             showMenu().object()
             choice = input("Enter your menu choice: ")
             
@@ -618,17 +685,18 @@ class uInterface(object):
             cur_pos = self.clientSocket.sendRequest("Report Position") #Take the position of the radio telescope
             if (cur_pos == "No answer") or (cur_pos == None):
                 print("Can not get the current position of the system.")
-                self.logdata.log("ERROR", "Can not get the current position of the system.")
+                self.logdata.log("ERROR", "Can not get the current position of the system.", "positionMenu")
             else:
                 cur_pos = cur_pos.split("_")
                 print("The current position of the radio telescope is:")
+                self.logdata.log("INFO", "The current telescope position is\nRA: %s\nDEC: %s" %(cur_pos[1], cur_pos[2]), "positionMenu")
                 if cur_pos[0] == "POS":
                     #Make the formatting according to the data sent from the radio telescope pi
-                    print("  >RA : %s" %cur_pos[1])
-                    print("  >DEC: %s\n" %cur_pos[2])
-            user_inp = input("Type 1 to return to main menu: ") #Prompt the user to return to main menu
-            while(user_inp != "1"):
-                user_inp = input("Please enter 1 if you want to return to main menu: ")
+                    print("  >RA : %s" %cur_pos[1] + u"\u00b0")
+                    print("  >DEC: %s" %cur_pos[2] + u"\u00b0\n")
+            user_inp = input("Press enter to return to main menu: ") #Prompt the user to return to main menu
+            while(user_inp != ""):
+                user_inp = input("Please press enter if you want to return to main menu: ")
             break #Return to main menu after a successful run
     
     def getAngle(self, angName):
