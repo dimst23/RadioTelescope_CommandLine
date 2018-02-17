@@ -54,11 +54,11 @@ class TCPClient(object):
     
     def longWait_rcv(self, time):
         if self.sock_connected:
-            self.sock.settimeout(time)
+            self.sock.settimeout(time) #Set the timeout as the user requests
             try:
                 response = self.sock.recv(1024).decode('utf-8')
-                self.sock.settimeout(20)
+                self.sock.settimeout(20) #Reset the socket timeout before exiting
                 return response
             except:
-                self.sock.settimeout(20)
-                return "No answer"
+                self.sock.settimeout(20) #Reset the socket timeout before exiting
+                return "No answer" #Indicate that nothing was received
