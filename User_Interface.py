@@ -61,7 +61,7 @@ class uInterface(object):
                 print("         >Name: %s" %cur_obj[0])
             else:
                 print("         >Name: %s" %cur_obj[0])
-                print("         >RA:   %s" %cur_obj[1] + u"\u00b0")
+                print("         >RA :  %s" %cur_obj[1] + u"\u00b0")
                 print("         >DEC:  %s" %cur_obj[2] + u"\u00b0")
             print("***********************************************")
             
@@ -414,7 +414,7 @@ class uInterface(object):
                 print("         >Name: %s" %chosen_body[0])
             else:
                 print("         >Name: %s" %chosen_body[0])
-                print("         >RA:   %s" %chosen_body[1] + u"\u00b0")
+                print("         >RA :  %s" %chosen_body[1] + u"\u00b0")
                 print("         >DEC:  %s" %chosen_body[2] + u"\u00b0")
             print("   [*]Telescope status:")
             #Add code for tracking status checking
@@ -424,7 +424,7 @@ class uInterface(object):
                 print("         >Position: %s" %cur_pos)
             else:
                 print("         >Position: ")
-                print("             *RA:  %s" %cur_pos[1] + u"\u00b0")
+                print("             *RA : %s" %cur_pos[1] + u"\u00b0")
                 print("             *DEC: %s" %cur_pos[2] + u"\u00b0")
             print("***********************************************")
             
@@ -462,7 +462,7 @@ class uInterface(object):
                 input("Press enter or type anything to return to main menu: ")
                 break
     
-    def transitMenu(self):
+    def transitMenu(self, tim = ""):
         #Declare some variable that are later required and initialize them
         obj_ra = "-1"
         obj_dec = "-1"
@@ -480,7 +480,7 @@ class uInterface(object):
                 print("         >Name: %s" %chosen_body[0])
             else:
                 print("         >Name: %s" %chosen_body[0])
-                print("         >RA:   %s" %chosen_body[1])
+                print("         >RA :  %s" %chosen_body[1])
                 print("         >DEC:  %s" %chosen_body[2])
             print("***********************************************")
             
@@ -495,7 +495,6 @@ class uInterface(object):
                 self.cls()
                 print("Give a transit time, in 24hr format, which is after the time that enter will be pressed (at least 1 minute).")
                 print("For better results, provide a time at least 10 minutes from the current time.")
-                tim = input("Give the transit time in UTC by separating hours, minutes, seconds with ':' (e.g. '20:12:34'): ")
                 
                 '''
                     Get the time from the user and then check if it is the same as the current time.
@@ -505,14 +504,20 @@ class uInterface(object):
                     time.gmtime(), tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec
                 '''
                 t_obj = time.gmtime() #Get the return from the gmtime function to use it in the date creation
-                while(True):
-                    temp = tim.split(":")
-                    if int(temp[0]) < 24 or int(temp[1]) <= 59 or int(temp[2]) <= 59: #Check if the time is correct
-                        if int(temp[0]) > int(t_obj.tm_hour) or ((int(t_obj.tm_hour) == int(temp[0])) 
-                            and (int(t_obj.tm_min) - (int(temp[1])) is not 0) and (int(temp[1]) > int(t_obj.tm_min))):
-                            break
-                        else:
-                            tim = input("Please enter a correct time: ")
+                if tim == "":
+                    tim = input("Give the transit time in UTC by separating hours, minutes, seconds with ':' (e.g. '20:12:34'): ")
+                    while(True): #Make sure correct time input
+                        t_obj = time.gmtime() #Get the current time
+                        temp = tim.split(":") #Take the time components
+                        try:
+                            if int(temp[0]) < 24 or int(temp[1]) <= 59 or int(temp[2]) <= 59: #Check if the time is correct
+                                if int(temp[0]) > int(t_obj.tm_hour) or ((int(t_obj.tm_hour) == int(temp[0])) 
+                                    and (int(t_obj.tm_min) - (int(temp[1])) is not 0) and (int(temp[1]) > int(t_obj.tm_min))):
+                                    break
+                                else:
+                                    tim = input("Please enter a correct time. Current UTC time is %s:%s:: " %(t_obj.tm_hour, t_obj.tm_min))
+                        except ValueError:
+                            tim = input("Please enter a correct time. Current time is %s:%s UTC: " %(t_obj.tm_hour, t_obj.tm_min))
                 
                 #If everything succeeds from the control, then move on with the following
                 date = "%s/%s/%s" %(t_obj.tm_year, t_obj.tm_mon, t_obj.tm_mday) #Save the date in a string in the appropriate format
@@ -544,12 +549,12 @@ class uInterface(object):
                 
                 #Add control for the negative value of the hour angle
                 #When the hour angle is negative then add 360 to make it positive if you wish, or indicate leftward direction, provided that the 0 position is south
-                self.logdata.log("INFO", "Transit command sent\nObject: %s\nSidereal Time: %s\nRA: %s\nDEC: %s\nHour angle: %s" 
+                self.logdata.log("INFO", "Transit command sent\nObject: %s\nSidereal Time: %.5f\nRA: %.5f\nDEC: %.5f\nHour angle: %.5f" 
                     %(chosen_body[0], float(self.observer.sidereal_time())*_rad_to_deg, obj_ra, obj_dec, hour_ang), "transitMenu")
                 #sleep(5) #Used for testing
                 
                 #Send the request for the transit along with the required information to the Raspberry Pi
-                rsp = self.clientSocket.sendRequest("TRNST_RA_%s_DEC_%s" %(hour_ang, obj_dec)) #Send the transit request and get the response
+                rsp = self.clientSocket.sendRequest("TRNST_RA_%.5f_DEC_%.5f" %(hour_ang, obj_dec)) #Send the transit request and get the response
                 if rsp == "No answer":
                     rsp = self.clientSocket.longWait_rcv(60) #Wait to receive the response for 60 seconds, because the dish can take time to reach position
                 
@@ -564,6 +569,11 @@ class uInterface(object):
                 break      
     
     def trackingMenu(self):
+        #Declare some variable that are later required and initialize them
+        obj_ra = "-1"
+        obj_dec = "-1"
+        start_time = 0 #Variable to hold the time delay where the tracking starts after setting the dish position
+        
         chosen_body = self.cfgData.getObject() #Get the currently chosen object
         self.cls()
         print("***********************************************")
@@ -572,7 +582,7 @@ class uInterface(object):
             print("         >Name: %s" %chosen_body[0])
         else:
             print("         >Name: %s" %chosen_body[0])
-            print("         >RA:   %s" %chosen_body[1] + u"\u00b0")
+            print("         >RA :  %s" %chosen_body[1] + u"\u00b0")
             print("         >DEC:  %s" %chosen_body[2] + u"\u00b0")
         print("***********************************************")
         
@@ -608,11 +618,12 @@ class uInterface(object):
             for i in range(0, 60):
                 #cur_time_d += 6.9444444444444445e-04 #Add a minute each time, because a change in seconds is too small
                 cur_time_d += 0.0416666666666667 #Add an hour in each iteration, because the change in time for RA/DEC is small
-                tm_date = "%s%s" %(date, cur_time_d)
-                body.compute(tm_date, epoch=date)
-                cur_ra = float(body.a_ra)
-                cur_dec = float(body.a_dec)
+                tm_date = "%s%s" %(date, cur_time_d) #Create the date and time string to use it for the calculations
+                body.compute(tm_date, epoch=date) #Compute the RA and DEC for the current date and time
+                cur_ra = float(body.a_ra) #Calculated RA for the body
+                cur_dec = float(body.a_dec) #Calculated DEC for the body
                 if i > 0:
+                    #Take the sum of each value to calculate average later
                     sum_ra += (cur_ra - prev_ra)
                     sum_dec += (cur_dec - prev_dec)
                 prev_ra = cur_ra #Set the previous value to the current one before reiterating
@@ -624,18 +635,50 @@ class uInterface(object):
         
         ans = input("\nDo you want to start tracking? Enter 'y' for yes or anything to quit tracking: ")
         if ans == "y":
+            #Call the transit first to set the dish to a position ahead of the target and wait until it passes in front of the dish
+            #After coming in the dish center, then start tracking
+        
+            #The hour angle of the object is LST (Local Sidereal Time) - a (Right Ascension)
+            self.observer.date = tm_date #Set the observer's date
+            hour_ang = float(self.observer.sidereal_time())*_rad_to_deg - obj_ra #ephem sidereal returns in rad
+            
+            #If the dish is taking considerable time to got to position, we will set the position accordingly
+            #By adding the required amount of time on the hour angle above (by changing the tm_date string)
+            
+            #Add control for the negative value of the hour angle
+            #When the hour angle is negative then add 360 to make it positive if you wish, or indicate leftward direction, provided that the 0 position is south
+            self.logdata.log("INFO", "Transit command sent\nObject: %s\nSidereal Time: %.5f\nRA: %.5f\nDEC: %.5f\nHour angle: %.5f" 
+                %(chosen_body[0], float(self.observer.sidereal_time())*_rad_to_deg, obj_ra, obj_dec, hour_ang), "trackingMenu")
+            
+            #Send the transit request for the current object and that is done to set the dish position for tracking
+            rsp = self.clientSocket.sendRequest("TRNST_RA_%.5f_DEC_%.5f" %(hour_ang, obj_dec)) #Send the transit request and get the response
+            if rsp == "No answer":
+                rsp = self.clientSocket.longWait_rcv(60) #Wait to receive the response for 60 seconds, because the dish can take time to reach position
+            elif rsp == "POSITION_SET":
+                print("The telescope is ready to start tracking.")
+                self.logdata.log("INFO", "The telescope is at its position and ready to start tracking.", "trackingMenu")
+            else:
+                print("There was a problem with setting the telescopes position. %s" %rsp)
+                self.logdata.log("WARNING", "There was a problem with setting the telescopes position. Server sent: %s" %rsp, "trackingMenu")
+            
             #Send the command and get the response
-            response = self.clientSocket.sendRequest("AAF_RA_%f_ROC_%f_DEC_%f_ROC_%f_TIM_%f" %(obj_ra, roc_ra, obj_dec, roc_dec, float(track_time)))
-            print("AAF_RA_%f_ROC_%f_DEC_%f_ROC_%f_TIM_%f" %(obj_ra, roc_ra, obj_dec, roc_dec, float(track_time)))
-            sleep(3)
+            response = self.clientSocket.sendRequest("AAF_RA_%.5f_ROC_%f_DEC_%.5f_ROC_%f_TIM_%f_STRT_%f" 
+                %(obj_ra, roc_ra, obj_dec, roc_dec, float(track_time), start_time))
+            
+            self.logdata.log("INFO", "Aim and Follow command was sent with the following details\nObject name: %s\nRA/ROC: %.5f/%.5f\nDEC/ROC: %.5f/%.5f"
+                %(chosen_body[0], obj_ra, roc_ra, obj_dec, roc_dec), "trackingMenu")
+            print("AAF_RA_%.5f_ROC_%f_DEC_%.5f_ROC_%f_TIM_%f" %(obj_ra, roc_ra, obj_dec, roc_dec, float(track_time))) #Debugging purposes
         else:
-            return 1
+            break #Return to control menu
         #Add more control
-        if response == "AIM_CENTERED_TRK_STARTED":
+        if response == "OBJECT_CENTERED_TRACKING_STARTED":
             print("Tracking successfully started.")
-            sleep(3)
+            self.logdata.log("INFO", "Telescope successfully tracking the requested object.", "trackingMenu")
         else:
             print("There was a problem with the tracking, try again or fix the problem.")
+            self.logdata.log("WARNING", "There was a problem with object tracking and the telescope is not tracking. Server sent: %s" 
+                %response, "trackingMenu")
+        sleep(3) #Pause some time, so the user can see the messages
         
     #def scanningMenu(self):
         
@@ -655,7 +698,7 @@ class uInterface(object):
                 print("         >Name: %s" %chosen_body[0])
             else:
                 print("         >Name: %s" %chosen_body[0])
-                print("         >RA:   %s" %chosen_body[1] + u"\u00b0")
+                print("         >RA :  %s" %chosen_body[1] + u"\u00b0")
                 print("         >DEC:  %s" %chosen_body[2] + u"\u00b0")
             print("***********************************************")
             
@@ -672,8 +715,8 @@ class uInterface(object):
                 self.cls()
                 print("Enter the object details below.")
                 name_in = input("Object's name: ")
-                ra_in = input("Right Ascension: ")
-                dec_in = input("Declination: ")
+                ra_in = input("Right Ascension (RA): ")
+                dec_in = input("Declination (DEC): ")
                 #Type conversion is needed for the coordinates before saving
                 self.cfgData.setObject(name_in, ra_in, dec_in)
             elif choice == "5":
