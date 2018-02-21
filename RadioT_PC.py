@@ -37,6 +37,7 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print("User requested termination with a keyboard interrupt.\n")
         logdata.log("EXCEPT", "User requested termination with a keyboard interrupt.", __name__)
+        tcpClient.disconnect()
         exit(0) #Terminate the script
     except:
         print("Something really bad happened!! We should terminate.\n")
